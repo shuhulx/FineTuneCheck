@@ -1,0 +1,231 @@
+{
+  "name": "code",
+  "version": "1.0",
+  "category": "code",
+  "judge_type": "execution",
+  "judge_criteria": "Execute the generated Python code against the provided test cases. Score 1.0 if all test cases pass, partial credit proportional to fraction of passing tests.",
+  "samples": [
+    {
+      "id": "code_0",
+      "input": "Write a Python function `two_sum(nums: list[int], target: int) -> list[int]` that returns the indices of two numbers in `nums` that add up to `target`. Assume exactly one solution exists and you may not use the same element twice.",
+      "reference": "def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        complement = target - n\n        if complement in seen:\n            return [seen[complement], i]\n        seen[n] = i\n    return []",
+      "difficulty": "easy",
+      "tags": ["hash_map", "array"],
+      "metadata": {
+        "test_cases": [
+          {"input": "two_sum([2, 7, 11, 15], 9)", "output": "[0, 1]"},
+          {"input": "two_sum([3, 2, 4], 6)", "output": "[1, 2]"},
+          {"input": "two_sum([3, 3], 6)", "output": "[0, 1]"},
+          {"input": "two_sum([1, 5, 8, 3], 4)", "output": "[0, 3]"}
+        ]
+      }
+    },
+    {
+      "id": "code_1",
+      "input": "Write a Python function `is_palindrome(s: str) -> bool` that checks if a string is a palindrome, considering only alphanumeric characters and ignoring case.",
+      "reference": "def is_palindrome(s):\n    filtered = [c.lower() for c in s if c.isalnum()]\n    return filtered == filtered[::-1]",
+      "difficulty": "easy",
+      "tags": ["string", "two_pointer"],
+      "metadata": {
+        "test_cases": [
+          {"input": "is_palindrome('A man, a plan, a canal: Panama')", "output": "True"},
+          {"input": "is_palindrome('race a car')", "output": "False"},
+          {"input": "is_palindrome('')", "output": "True"},
+          {"input": "is_palindrome('ab_a')", "output": "True"}
+        ]
+      }
+    },
+    {
+      "id": "code_2",
+      "input": "Write a Python function `flatten(lst)` that takes an arbitrarily nested list and returns a flat list of all elements. For example, `flatten([1, [2, [3, 4], 5], 6])` returns `[1, 2, 3, 4, 5, 6]`.",
+      "reference": "def flatten(lst):\n    result = []\n    for item in lst:\n        if isinstance(item, list):\n            result.extend(flatten(item))\n        else:\n            result.append(item)\n    return result",
+      "difficulty": "medium",
+      "tags": ["recursion", "list"],
+      "metadata": {
+        "test_cases": [
+          {"input": "flatten([1, [2, [3, 4], 5], 6])", "output": "[1, 2, 3, 4, 5, 6]"},
+          {"input": "flatten([[1, 2], [3, [4, [5]]]])", "output": "[1, 2, 3, 4, 5]"},
+          {"input": "flatten([])", "output": "[]"},
+          {"input": "flatten([1, 2, 3])", "output": "[1, 2, 3]"}
+        ]
+      }
+    },
+    {
+      "id": "code_3",
+      "input": "Write a Python function `merge_intervals(intervals: list[list[int]]) -> list[list[int]]` that merges all overlapping intervals. For example, `merge_intervals([[1,3],[2,6],[8,10],[15,18]])` returns `[[1,6],[8,10],[15,18]]`.",
+      "reference": "def merge_intervals(intervals):\n    if not intervals:\n        return []\n    intervals.sort(key=lambda x: x[0])\n    merged = [intervals[0]]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return merged",
+      "difficulty": "medium",
+      "tags": ["sorting", "interval"],
+      "metadata": {
+        "test_cases": [
+          {"input": "merge_intervals([[1,3],[2,6],[8,10],[15,18]])", "output": "[[1, 6], [8, 10], [15, 18]]"},
+          {"input": "merge_intervals([[1,4],[4,5]])", "output": "[[1, 5]]"},
+          {"input": "merge_intervals([[1,4],[0,4]])", "output": "[[0, 4]]"},
+          {"input": "merge_intervals([])", "output": "[]"}
+        ]
+      }
+    },
+    {
+      "id": "code_4",
+      "input": "Write a Python function `lru_cache(capacity: int)` that returns a class implementing an LRU cache with `get(key)` and `put(key, value)` methods. `get` returns -1 if key not found. Both operations must be O(1).",
+      "reference": "from collections import OrderedDict\n\ndef lru_cache(capacity):\n    class LRUCache:\n        def __init__(self):\n            self.cache = OrderedDict()\n            self.capacity = capacity\n        def get(self, key):\n            if key not in self.cache:\n                return -1\n            self.cache.move_to_end(key)\n            return self.cache[key]\n        def put(self, key, value):\n            if key in self.cache:\n                self.cache.move_to_end(key)\n            self.cache[key] = value\n            if len(self.cache) > self.capacity:\n                self.cache.popitem(last=False)\n    return LRUCache()",
+      "difficulty": "hard",
+      "tags": ["design", "hash_map", "linked_list"],
+      "metadata": {
+        "test_cases": [
+          {"input": "c = lru_cache(2); c.put(1,1); c.put(2,2); c.get(1)", "output": "1"},
+          {"input": "c = lru_cache(2); c.put(1,1); c.put(2,2); c.put(3,3); c.get(2)", "output": "-1"},
+          {"input": "c = lru_cache(1); c.put(1,1); c.put(2,2); c.get(1)", "output": "-1"},
+          {"input": "c = lru_cache(2); c.put(1,1); c.get(1); c.put(2,2); c.put(3,3); c.get(1)", "output": "1"}
+        ]
+      }
+    },
+    {
+      "id": "code_5",
+      "input": "Write a Python function `longest_common_subsequence(s1: str, s2: str) -> int` that returns the length of the longest common subsequence of two strings.",
+      "reference": "def longest_common_subsequence(s1, s2):\n    m, n = len(s1), len(s2)\n    dp = [[0] * (n + 1) for _ in range(m + 1)]\n    for i in range(1, m + 1):\n        for j in range(1, n + 1):\n            if s1[i-1] == s2[j-1]:\n                dp[i][j] = dp[i-1][j-1] + 1\n            else:\n                dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n    return dp[m][n]",
+      "difficulty": "medium",
+      "tags": ["dynamic_programming", "string"],
+      "metadata": {
+        "test_cases": [
+          {"input": "longest_common_subsequence('abcde', 'ace')", "output": "3"},
+          {"input": "longest_common_subsequence('abc', 'abc')", "output": "3"},
+          {"input": "longest_common_subsequence('abc', 'def')", "output": "0"},
+          {"input": "longest_common_subsequence('', 'abc')", "output": "0"}
+        ]
+      }
+    },
+    {
+      "id": "code_6",
+      "input": "Write a Python function `valid_parentheses(s: str) -> bool` that determines if a string containing '(', ')', '{', '}', '[', ']' has valid matching brackets.",
+      "reference": "def valid_parentheses(s):\n    stack = []\n    mapping = {')': '(', '}': '{', ']': '['}\n    for char in s:\n        if char in mapping:\n            top = stack.pop() if stack else '#'\n            if mapping[char] != top:\n                return False\n        else:\n            stack.append(char)\n    return not stack",
+      "difficulty": "easy",
+      "tags": ["stack", "string"],
+      "metadata": {
+        "test_cases": [
+          {"input": "valid_parentheses('()')", "output": "True"},
+          {"input": "valid_parentheses('()[]{}')", "output": "True"},
+          {"input": "valid_parentheses('(]')", "output": "False"},
+          {"input": "valid_parentheses('([)]')", "output": "False"},
+          {"input": "valid_parentheses('{[]}')", "output": "True"}
+        ]
+      }
+    },
+    {
+      "id": "code_7",
+      "input": "Write a Python function `group_anagrams(strs: list[str]) -> list[list[str]]` that groups anagrams together. The output order of groups does not matter, but each group should be sorted.",
+      "reference": "from collections import defaultdict\n\ndef group_anagrams(strs):\n    groups = defaultdict(list)\n    for s in strs:\n        key = ''.join(sorted(s))\n        groups[key].append(s)\n    return [sorted(g) for g in groups.values()]",
+      "difficulty": "medium",
+      "tags": ["hash_map", "sorting"],
+      "metadata": {
+        "test_cases": [
+          {"input": "sorted([sorted(g) for g in group_anagrams(['eat','tea','tan','ate','nat','bat'])])", "output": "[['ate', 'eat', 'tea'], ['bat'], ['nat', 'tan']]"},
+          {"input": "group_anagrams([''])", "output": "[['']]"},
+          {"input": "group_anagrams(['a'])", "output": "[['a']]"}
+        ]
+      }
+    },
+    {
+      "id": "code_8",
+      "input": "Write a Python function `max_subarray(nums: list[int]) -> int` that finds the contiguous subarray with the largest sum and returns that sum (Kadane's algorithm).",
+      "reference": "def max_subarray(nums):\n    max_sum = current = nums[0]\n    for n in nums[1:]:\n        current = max(n, current + n)\n        max_sum = max(max_sum, current)\n    return max_sum",
+      "difficulty": "medium",
+      "tags": ["dynamic_programming", "array"],
+      "metadata": {
+        "test_cases": [
+          {"input": "max_subarray([-2,1,-3,4,-1,2,1,-5,4])", "output": "6"},
+          {"input": "max_subarray([1])", "output": "1"},
+          {"input": "max_subarray([5,4,-1,7,8])", "output": "23"},
+          {"input": "max_subarray([-1,-2,-3])", "output": "-1"}
+        ]
+      }
+    },
+    {
+      "id": "code_9",
+      "input": "Write a Python function `word_count(text: str) -> dict[str, int]` that counts the frequency of each word in the text. Words should be lowercased and stripped of leading/trailing punctuation.",
+      "reference": "import re\n\ndef word_count(text):\n    counts = {}\n    for word in text.split():\n        word = re.sub(r'^[^\\w]+|[^\\w]+$', '', word).lower()\n        if word:\n            counts[word] = counts.get(word, 0) + 1\n    return counts",
+      "difficulty": "easy",
+      "tags": ["string", "hash_map"],
+      "metadata": {
+        "test_cases": [
+          {"input": "word_count('Hello hello world')", "output": "{'hello': 2, 'world': 1}"},
+          {"input": "word_count('The cat, the dog.')", "output": "{'the': 2, 'cat': 1, 'dog': 1}"},
+          {"input": "word_count('')", "output": "{}"}
+        ]
+      }
+    },
+    {
+      "id": "code_10",
+      "input": "Write a Python function `spiral_order(matrix: list[list[int]]) -> list[int]` that returns all elements of a 2D matrix in spiral order (clockwise from top-left).",
+      "reference": "def spiral_order(matrix):\n    if not matrix:\n        return []\n    result = []\n    top, bottom, left, right = 0, len(matrix)-1, 0, len(matrix[0])-1\n    while top <= bottom and left <= right:\n        for c in range(left, right+1):\n            result.append(matrix[top][c])\n        top += 1\n        for r in range(top, bottom+1):\n            result.append(matrix[r][right])\n        right -= 1\n        if top <= bottom:\n            for c in range(right, left-1, -1):\n                result.append(matrix[bottom][c])\n            bottom -= 1\n        if left <= right:\n            for r in range(bottom, top-1, -1):\n                result.append(matrix[r][left])\n            left += 1\n    return result",
+      "difficulty": "hard",
+      "tags": ["matrix", "simulation"],
+      "metadata": {
+        "test_cases": [
+          {"input": "spiral_order([[1,2,3],[4,5,6],[7,8,9]])", "output": "[1, 2, 3, 6, 9, 8, 7, 4, 5]"},
+          {"input": "spiral_order([[1,2],[3,4]])", "output": "[1, 2, 4, 3]"},
+          {"input": "spiral_order([[1]])", "output": "[1]"},
+          {"input": "spiral_order([])", "output": "[]"}
+        ]
+      }
+    },
+    {
+      "id": "code_11",
+      "input": "Write a Python function `binary_search(nums: list[int], target: int) -> int` that returns the index of `target` in a sorted array, or -1 if not found.",
+      "reference": "def binary_search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        elif nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+      "difficulty": "easy",
+      "tags": ["binary_search", "array"],
+      "metadata": {
+        "test_cases": [
+          {"input": "binary_search([1,3,5,7,9], 5)", "output": "2"},
+          {"input": "binary_search([1,3,5,7,9], 6)", "output": "-1"},
+          {"input": "binary_search([], 1)", "output": "-1"},
+          {"input": "binary_search([1], 1)", "output": "0"}
+        ]
+      }
+    },
+    {
+      "id": "code_12",
+      "input": "Write a Python function `min_window(s: str, t: str) -> str` that finds the minimum window substring of `s` that contains all characters of `t` (including duplicates). Return empty string if no such window exists.",
+      "reference": "from collections import Counter\n\ndef min_window(s, t):\n    if not t or not s:\n        return ''\n    need = Counter(t)\n    missing = len(t)\n    best = ''\n    j = 0\n    for i, c in enumerate(s):\n        if need[c] > 0:\n            missing -= 1\n        need[c] -= 1\n        while missing == 0:\n            window = s[j:i+1]\n            if not best or len(window) < len(best):\n                best = window\n            need[s[j]] += 1\n            if need[s[j]] > 0:\n                missing += 1\n            j += 1\n    return best",
+      "difficulty": "hard",
+      "tags": ["sliding_window", "hash_map"],
+      "metadata": {
+        "test_cases": [
+          {"input": "min_window('ADOBECODEBANC', 'ABC')", "output": "'BANC'"},
+          {"input": "min_window('a', 'a')", "output": "'a'"},
+          {"input": "min_window('a', 'aa')", "output": "''"},
+          {"input": "min_window('ab', 'b')", "output": "'b'"}
+        ]
+      }
+    },
+    {
+      "id": "code_13",
+      "input": "Write a Python function `top_k_frequent(nums: list[int], k: int) -> list[int]` that returns the `k` most frequent elements. The result can be in any order.",
+      "reference": "from collections import Counter\n\ndef top_k_frequent(nums, k):\n    return [x for x, _ in Counter(nums).most_common(k)]",
+      "difficulty": "medium",
+      "tags": ["hash_map", "heap"],
+      "metadata": {
+        "test_cases": [
+          {"input": "sorted(top_k_frequent([1,1,1,2,2,3], 2))", "output": "[1, 2]"},
+          {"input": "top_k_frequent([1], 1)", "output": "[1]"},
+          {"input": "sorted(top_k_frequent([4,4,4,3,3,2], 2))", "output": "[3, 4]"}
+        ]
+      }
+    },
+    {
+      "id": "code_14",
+      "input": "Write a Python function `is_valid_bst(root)` that determines if a binary tree is a valid BST. The tree node class has attributes `val`, `left`, `right`. You may define the TreeNode class.",
+      "reference": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\ndef is_valid_bst(root):\n    def helper(node, lo, hi):\n        if not node:\n            return True\n        if node.val <= lo or node.val >= hi:\n            return False\n        return helper(node.left, lo, node.val) and helper(node.right, node.val, hi)\n    return helper(root, float('-inf'), float('inf'))",
+      "difficulty": "medium",
+      "tags": ["tree", "recursion"],
+      "metadata": {
+        "test_cases": [
+          {"input": "is_valid_bst(TreeNode(2, TreeNode(1), TreeNode(3)))", "output": "True"},
+          {"input": "is_valid_bst(TreeNode(5, TreeNode(1), TreeNode(4, TreeNode(3), TreeNode(6))))", "output": "False"},
+          {"input": "is_valid_bst(None)", "output": "True"}
+        ]
+      }
+    }
+  ]
+}

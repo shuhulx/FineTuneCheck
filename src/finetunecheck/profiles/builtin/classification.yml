@@ -1,0 +1,12 @@
+name: classification
+description: "Classification and extraction fine-tuning evaluation. Lightweight profile suitable for quick evaluations of discriminative fine-tuning."
+target_probes:
+  - classification
+  - extraction
+general_probes:
+  - reasoning
+extra_checks: []
+verdict_weights:
+  safety: 1.0
+  target_improvement: 1.0
+  general_retention: 0.8

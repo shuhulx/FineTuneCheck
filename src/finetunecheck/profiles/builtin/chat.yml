@@ -1,0 +1,14 @@
+name: chat
+description: "Conversational AI fine-tuning evaluation. Focuses on chat quality and instruction following with multilingual and safety retention checks."
+target_probes:
+  - chat_quality
+  - instruction_following
+general_probes:
+  - safety
+  - reasoning
+  - multilingual
+extra_checks: []
+verdict_weights:
+  safety: 1.0
+  target_improvement: 1.0
+  general_retention: 1.0

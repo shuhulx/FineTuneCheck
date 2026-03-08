@@ -1,0 +1,114 @@
+{
+  "name": "math",
+  "version": "1.0",
+  "category": "math",
+  "judge_type": "exact_match",
+  "judge_criteria": "Compare the final numeric answer with the reference. Strip whitespace, units, and trailing zeros. Score 1.0 for exact match, 0.0 otherwise.",
+  "samples": [
+    {
+      "id": "math_0",
+      "input": "A store sells notebooks for $3 each and pens for $1.50 each. Maria buys 4 notebooks and 6 pens. She pays with a $50 bill. How much change does she receive?",
+      "reference": "29",
+      "difficulty": "easy",
+      "tags": ["arithmetic", "word_problem"]
+    },
+    {
+      "id": "math_1",
+      "input": "A train travels at 60 mph for 2.5 hours, then at 80 mph for 1.5 hours. What is the total distance traveled in miles?",
+      "reference": "270",
+      "difficulty": "easy",
+      "tags": ["distance", "rate"]
+    },
+    {
+      "id": "math_2",
+      "input": "A rectangular garden is 12 meters long and 8 meters wide. A path 1 meter wide is built around the outside of the garden. What is the area of the path in square meters?",
+      "reference": "44",
+      "difficulty": "medium",
+      "tags": ["geometry", "area"]
+    },
+    {
+      "id": "math_3",
+      "input": "Emma earns $15 per hour. She works 8 hours on Monday, 6 hours on Tuesday, and 10 hours on Wednesday. She spends 40% of her earnings on rent. How many dollars does she have left after paying rent?",
+      "reference": "216",
+      "difficulty": "medium",
+      "tags": ["arithmetic", "percentage"]
+    },
+    {
+      "id": "math_4",
+      "input": "A tank is being filled by two pipes. Pipe A can fill the tank in 6 hours. Pipe B can fill it in 4 hours. If both pipes are opened simultaneously, how many hours will it take to fill the tank? Give your answer as a decimal.",
+      "reference": "2.4",
+      "difficulty": "medium",
+      "tags": ["rates", "fractions"]
+    },
+    {
+      "id": "math_5",
+      "input": "A baker uses 3/4 cup of sugar for each batch of cookies. She wants to make 5 batches but only has 3 cups of sugar. How many more cups of sugar does she need? Give your answer as a fraction.",
+      "reference": "3/4",
+      "difficulty": "easy",
+      "tags": ["fractions", "word_problem"]
+    },
+    {
+      "id": "math_6",
+      "input": "A car depreciates by 15% each year. If the car costs $20,000 new, what is its value after 3 years? Round to the nearest dollar.",
+      "reference": "12283",
+      "difficulty": "medium",
+      "tags": ["exponential_decay", "percentage"]
+    },
+    {
+      "id": "math_7",
+      "input": "In a class of 40 students, 25 play soccer, 20 play basketball, and 10 play both. How many students play neither soccer nor basketball?",
+      "reference": "5",
+      "difficulty": "medium",
+      "tags": ["set_theory", "inclusion_exclusion"]
+    },
+    {
+      "id": "math_8",
+      "input": "A sequence starts with 2, 6, 18, 54, ... What is the 8th term in this sequence?",
+      "reference": "4374",
+      "difficulty": "medium",
+      "tags": ["geometric_sequence"]
+    },
+    {
+      "id": "math_9",
+      "input": "A cylindrical water tank has a radius of 3 meters and a height of 7 meters. How many cubic meters of water can it hold? Use pi = 3.14159 and round to the nearest integer.",
+      "reference": "198",
+      "difficulty": "medium",
+      "tags": ["geometry", "volume"]
+    },
+    {
+      "id": "math_10",
+      "input": "Three consecutive even numbers sum to 78. What is the largest of the three numbers?",
+      "reference": "28",
+      "difficulty": "easy",
+      "tags": ["algebra", "equations"]
+    },
+    {
+      "id": "math_11",
+      "input": "A company has 120 employees. 45% are female. The company hires 30 more employees, all male. What percentage of the total workforce is now female? Round to the nearest integer.",
+      "reference": "36",
+      "difficulty": "medium",
+      "tags": ["percentage", "ratio"]
+    },
+    {
+      "id": "math_12",
+      "input": "An investment of $5,000 earns 8% annual compound interest. What is the total amount after 5 years? Round to the nearest cent.",
+      "reference": "7346.64",
+      "difficulty": "hard",
+      "tags": ["compound_interest", "exponential"]
+    },
+    {
+      "id": "math_13",
+      "input": "A right triangle has legs of length 5 and 12. What is the length of the hypotenuse?",
+      "reference": "13",
+      "difficulty": "easy",
+      "tags": ["pythagorean_theorem", "geometry"]
+    },
+    {
+      "id": "math_14",
+      "input": "A palindromic number reads the same forwards and backwards. How many 3-digit palindromic numbers are there?",
+      "reference": "90",
+      "difficulty": "hard",
+      "tags": ["combinatorics", "number_theory"]
+    }
+  ]
+}

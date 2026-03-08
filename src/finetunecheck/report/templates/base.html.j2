@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="{{ plotly_js }}"></script>
+    <style>
+        /* ================================================================
+           FineTuneCheck Report — clean, enterprise-quality styling
+           ================================================================ */
+
+        :root {
+            --green: #10B981;
+            --green-bg: #ECFDF5;
+            --amber: #F59E0B;
+            --amber-bg: #FFFBEB;
+            --red: #EF4444;
+            --red-bg: #FEF2F2;
+            --indigo: #6366F1;
+            --indigo-bg: #EEF2FF;
+            --slate-50: #F8FAFC;
+            --slate-100: #F1F5F9;
+            --slate-200: #E2E8F0;
+            --slate-300: #CBD5E1;
+            --slate-400: #94A3B8;
+            --slate-500: #64748B;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1E293B;
+            --slate-900: #0F172A;
+            --radius: 12px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--slate-50);
+            color: var(--slate-700);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- Top verdict banner --- */
+        .verdict-banner {
+            background: {{ verdict_color }};
+            color: #fff;
+            padding: 28px 0;
+            text-align: center;
+        }
+        .verdict-banner h1 {
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            opacity: 0.85;
+            margin-bottom: 6px;
+        }
+        .verdict-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .verdict-badge .roi {
+            font-size: 18px;
+            font-weight: 500;
+            opacity: 0.9;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 14px;
+            border-radius: 20px;
+        }
+
+        /* --- Container --- */
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* --- Section cards --- */
+        .section {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin: 24px 0;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 20px 28px 0;
+        }
+        .section-header h2 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--slate-800);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-header h2 .icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .section-body {
+            padding: 20px 28px 28px;
+        }
+
+        /* --- Summary --- */
+        .summary-text {
+            font-size: 15px;
+            color: var(--slate-600);
+            line-height: 1.7;
+            max-width: 760px;
+        }
+
+        /* --- Model info bar --- */
+        .model-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 20px 28px;
+            background: var(--slate-50);
+            border-bottom: 1px solid var(--slate-200);
+        }
+        .model-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--slate-600);
+        }
+        .model-tag .label {
+            font-weight: 600;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+        .model-tag code {
+            background: var(--slate-100);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 12px;
+            color: var(--slate-700);
+        }
+
+        /* --- Stat grid --- */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .stat-card {
+            background: var(--slate-50);
+            border-radius: 10px;
+            padding: 18px 20px;
+            text-align: center;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--slate-800);
+        }
+        .stat-card .stat-label {
+            font-size: 12px;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 4px;
+        }
+        .stat-positive { color: var(--green) !important; }
+        .stat-negative { color: var(--red) !important; }
+        .stat-neutral  { color: var(--amber) !important; }
+
+        /* --- Charts --- */
+        .chart-container {
+            width: 100%;
+            min-height: 300px;
+        }
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* --- Tables --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .data-table thead th {
+            background: var(--slate-50);
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--slate-400);
+            border-bottom: 2px solid var(--slate-200);
+        }
+        .data-table tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--slate-100);
+            color: var(--slate-600);
+        }
+        .data-table tbody tr:hover {
+            background: var(--slate-50);
+        }
+        .data-table .score-cell {
+            font-family: 'SF Mono', monospace;
+            font-weight: 600;
+        }
+        .score-up { color: var(--green); }
+        .score-down { color: var(--red); }
+        .score-flat { color: var(--slate-400); }
+
+        .truncate {
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- Recommendations & concerns --- */
+        .pill-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .pill-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .pill-list li .pill-icon {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-top: 1px;
+        }
+        .pill-concern {
+            background: var(--amber-bg);
+            color: var(--slate-700);
+        }
+        .pill-concern .pill-icon {
+            background: var(--amber);
+            color: #fff;
+        }
+        .pill-rec {
+            background: var(--indigo-bg);
+            color: var(--slate-700);
+        }
+        .pill-rec .pill-icon {
+            background: var(--indigo);
+            color: #fff;
+        }
+
+        /* --- Deep analysis grid --- */
+        .deep-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        .deep-card {
+            background: var(--slate-50);
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .deep-card h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        /* --- Footer --- */
+        .footer {
+            text-align: center;
+            padding: 32px 0 48px;
+            font-size: 12px;
+            color: var(--slate-400);
+        }
+        .footer a {
+            color: var(--indigo);
+            text-decoration: none;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .chart-row, .deep-grid { grid-template-columns: 1fr; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); }
+            .verdict-badge { font-size: 24px; }
+            .model-info { flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ====================== VERDICT BANNER ====================== -->
+<div class="verdict-banner">
+    <div class="container">
+        <h1>Fine-Tuning Evaluation</h1>
+        <div class="verdict-badge">
+            {{ verdict_label }}
+            <span class="roi">ROI {{ results.roi_score | int }} / 100</span>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== MODEL INFO ====================== -->
+<div class="container">
+    <div class="section">
+        <div class="model-info">
+            <div class="model-tag">
+                <span class="label">Base</span>
+                <code>{{ results.base_model }}</code>
+            </div>
+            <div class="model-tag">
+                <span class="label">Fine-tuned</span>
+                <code>{{ results.finetuned_model }}</code>
+            </div>
+            {% if results.target_task %}
+            <div class="model-tag">
+                <span class="label">Target Task</span>
+                <code>{{ results.target_task }}</code>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ====================== EXECUTIVE SUMMARY ====================== -->
+    <div class="section">
+        <div class="section-header">
+            <h2>Executive Summary</h2>
+        </div>
+        <div class="section-body">
+            <p class="summary-text">{{ results.summary }}</p>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-value {{ 'stat-positive' if results.target_improvement > 0 else 'stat-negative' }}">
+                        {{ "%+.1f" | format(results.target_improvement * 100) }}%
+                    </div>
+                    <div class="stat-label">Target Improvement</div>
+                </div>
+                {% if results.forgetting %}
+                <div class="stat-card">
+                    <div class="stat-value {{ 'stat-positive' if results.forgetting.backward_transfer > -0.05 else 'stat-negative' if results.forgetting.backward_transfer < -0.15 else 'stat-neutral' }}">
+                        {{ "%.2f" | format(results.forgetting.backward_transfer) }}
+                    </div>
+                    <div class="stat-label">Backward Transfer</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ "%.2f" | format(results.forgetting.selective_forgetting_index) }}</div>
+                    <div class="stat-label">Selective Forgetting</div>
+                </div>
+                {% if results.forgetting.safety_alignment_retention is not none %}
+                <div class="stat-card">
+                    <div class="stat-value {{ 'stat-positive' if results.forgetting.safety_alignment_retention >= 0.95 else 'stat-negative' }}">
+                        {{ "%.0f" | format(results.forgetting.safety_alignment_retention * 100) }}%
+                    </div>
+                    <div class="stat-label">Safety Retention</div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================== CATEGORY SCORES ====================== -->
+    <div class="section">
+        <div class="section-header">
+            <h2>Category Scores: Base vs Fine-tuned</h2>
+        </div>
+        <div class="section-body">
+            <div class="chart-row">
+                <div class="chart-container" id="chart-target-bars"></div>
+                <div class="chart-container" id="chart-radar"></div>
+            </div>
+
+            <table class="data-table" style="margin-top: 24px;">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Base Score</th>
+                        <th>Fine-tuned Score</th>
+                        <th>Change</th>
+                        {% if results.forgetting %}
+                        <th>Retention</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in results.base_scores.keys() | sort %}
+                    {% set bs = results.base_scores[cat].mean_score %}
+                    {% set fs = results.ft_scores[cat].mean_score %}
+                    {% set delta = fs - bs %}
+                    <tr>
+                        <td><strong>{{ cat }}</strong></td>
+                        <td class="score-cell">{{ "%.3f" | format(bs) }}</td>
+                        <td class="score-cell">{{ "%.3f" | format(fs) }}</td>
+                        <td class="score-cell {{ 'score-up' if delta > 0.005 else 'score-down' if delta < -0.005 else 'score-flat' }}">
+                            {{ "%+.3f" | format(delta) }}
+                        </td>
+                        {% if results.forgetting %}
+                        {% set ret = results.forgetting.capability_retention_rates.get(cat, 1.0) %}
+                        <td class="score-cell {{ 'score-up' if ret >= 0.95 else 'score-down' if ret < 0.85 else 'stat-neutral' }}">
+                            {{ "%.1f" | format(ret * 100) }}%
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ====================== FORGETTING ANALYSIS ====================== -->
+    {% if results.forgetting %}
+    <div class="section">
+        <div class="section-header">
+            <h2>Forgetting Analysis</h2>
+        </div>
+        <div class="section-body">
+            <div class="stat-grid" style="margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.forgetting.pattern.value | title }}</div>
+                    <div class="stat-label">Forgetting Pattern</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.forgetting.most_affected | length }}</div>
+                    <div class="stat-label">Affected Categories</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.forgetting.resilient | length }}</div>
+                    <div class="stat-label">Resilient Categories</div>
+                </div>
+            </div>
+
+            <div class="chart-container" id="chart-retention-bars"></div>
+
+            {% if results.forgetting.most_affected %}
+            <div style="margin-top: 16px;">
+                <strong style="font-size: 12px; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.05em;">Most affected:</strong>
+                <span style="font-size: 14px; color: var(--red);">{{ results.forgetting.most_affected | join(', ') }}</span>
+            </div>
+            {% endif %}
+            {% if results.forgetting.resilient %}
+            <div style="margin-top: 8px;">
+                <strong style="font-size: 12px; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.05em;">Resilient:</strong>
+                <span style="font-size: 14px; color: var(--green);">{{ results.forgetting.resilient | join(', ') }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ====================== DEEP ANALYSIS ====================== -->
+    {% if figures.deep_analysis %}
+    <div class="section">
+        <div class="section-header">
+            <h2>Deep Analysis</h2>
+        </div>
+        <div class="section-body">
+            <div class="deep-grid">
+                {% if figures.deep_analysis.cka_heatmap is defined and figures.deep_analysis.cka_heatmap %}
+                <div class="deep-card">
+                    <h3>CKA Similarity</h3>
+                    <div class="chart-container" id="chart-cka"></div>
+                    {% if results.deep_analysis.cka %}
+                    <p style="font-size: 12px; color: var(--slate-400); margin-top: 8px;">
+                        Mean CKA: {{ "%.3f" | format(results.deep_analysis.cka.mean_cka) }}
+                        {% if results.deep_analysis.cka.most_diverged_layers %}
+                        &mdash; Most diverged: {{ results.deep_analysis.cka.most_diverged_layers | join(', ') }}
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if figures.deep_analysis.ppl_dist is defined and figures.deep_analysis.ppl_dist %}
+                <div class="deep-card">
+                    <h3>Perplexity Distribution</h3>
+                    <div class="chart-container" id="chart-ppl"></div>
+                    {% if results.deep_analysis.perplexity %}
+                    <p style="font-size: 12px; color: var(--slate-400); margin-top: 8px;">
+                        KL Divergence: {{ "%.4f" | format(results.deep_analysis.perplexity.kl_divergence) }}
+                        &mdash; Base mean PPL: {{ "%.1f" | format(results.deep_analysis.perplexity.mean_ppl_base) }}
+                        &mdash; FT mean PPL: {{ "%.1f" | format(results.deep_analysis.perplexity.mean_ppl_ft) }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if figures.deep_analysis.spectral is defined and figures.deep_analysis.spectral %}
+                <div class="deep-card">
+                    <h3>Spectral Analysis</h3>
+                    <div class="chart-container" id="chart-spectral"></div>
+                    {% if results.deep_analysis.spectral %}
+                    <p style="font-size: 12px; color: var(--slate-400); margin-top: 8px;">
+                        Mean effective rank: {{ "%.1f" | format(results.deep_analysis.spectral.mean_effective_rank) }}
+                        {% if results.deep_analysis.spectral.is_lora %}
+                        &mdash; LoRA rank: {{ results.deep_analysis.spectral.lora_rank }}
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if figures.deep_analysis.calibration is defined and figures.deep_analysis.calibration %}
+                <div class="deep-card">
+                    <h3>Calibration (Reliability Diagram)</h3>
+                    <div class="chart-container" id="chart-calibration"></div>
+                    {% if results.deep_analysis.calibration %}
+                    <p style="font-size: 12px; color: var(--slate-400); margin-top: 8px;">
+                        Base ECE: {{ "%.4f" | format(results.deep_analysis.calibration.base_ece) }}
+                        &mdash; FT ECE: {{ "%.4f" | format(results.deep_analysis.calibration.ft_ece) }}
+                        &mdash; Delta: {{ "%+.4f" | format(results.deep_analysis.calibration.ece_delta) }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if figures.deep_analysis.activation is defined and figures.deep_analysis.activation %}
+                <div class="deep-card" style="grid-column: 1 / -1;">
+                    <h3>Activation Drift</h3>
+                    <div class="chart-container" id="chart-activation"></div>
+                    {% if results.deep_analysis.activation %}
+                    <p style="font-size: 12px; color: var(--slate-400); margin-top: 8px;">
+                        Mean drift: {{ "%.4f" | format(results.deep_analysis.activation.mean_drift) }}
+                        {% if results.deep_analysis.activation.disrupted_heads %}
+                        &mdash; {{ results.deep_analysis.activation.disrupted_heads | length }} disrupted attention heads
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ====================== REGRESSIONS TABLE ====================== -->
+    {% if results.forgetting and results.forgetting.regressions %}
+    <div class="section">
+        <div class="section-header">
+            <h2>Worst Sample-Level Regressions</h2>
+        </div>
+        <div class="section-body">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Sample</th>
+                        <th>Prompt</th>
+                        <th>Base Score</th>
+                        <th>FT Score</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in results.forgetting.regressions[:15] %}
+                    <tr>
+                        <td>{{ reg.category }}</td>
+                        <td style="font-family: monospace; font-size: 12px;">{{ reg.sample_id }}</td>
+                        <td class="truncate" title="{{ reg.prompt }}">{{ reg.prompt }}</td>
+                        <td class="score-cell">{{ "%.3f" | format(reg.base_score) }}</td>
+                        <td class="score-cell">{{ "%.3f" | format(reg.ft_score) }}</td>
+                        <td class="score-cell score-down">{{ "%+.3f" | format(reg.score_change) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if results.forgetting.regressions | length > 15 %}
+            <p style="font-size: 12px; color: var(--slate-400); margin-top: 12px; text-align: center;">
+                Showing top 15 of {{ results.forgetting.regressions | length }} regressions.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ====================== CONCERNS ====================== -->
+    {% if results.concerns %}
+    <div class="section">
+        <div class="section-header">
+            <h2>Concerns</h2>
+        </div>
+        <div class="section-body">
+            <ul class="pill-list">
+                {% for concern in results.concerns %}
+                <li class="pill-concern">
+                    <span class="pill-icon">!</span>
+                    <span>{{ concern }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ====================== RECOMMENDATIONS ====================== -->
+    {% if results.recommendations %}
+    <div class="section">
+        <div class="section-header">
+            <h2>Recommendations</h2>
+        </div>
+        <div class="section-body">
+            <ul class="pill-list">
+                {% for rec in results.recommendations %}
+                <li class="pill-rec">
+                    <span class="pill-icon">&rarr;</span>
+                    <span>{{ rec }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ====================== FOOTER ====================== -->
+    <div class="footer">
+        Generated by <strong>FineTuneCheck v{{ version }}</strong>
+    </div>
+</div>
+
+<!-- ====================== PLOTLY RENDERING ====================== -->
+<script>
+(function() {
+    var plotlyConfig = {responsive: true, displayModeBar: false};
+
+    function renderChart(elementId, figJson) {
+        var el = document.getElementById(elementId);
+        if (!el || !figJson || figJson === '{}') return;
+        try {
+            var fig = JSON.parse(figJson);
+            Plotly.newPlot(el, fig.data || [], fig.layout || {}, plotlyConfig);
+        } catch(e) {
+            console.warn('Failed to render chart ' + elementId + ':', e);
+        }
+    }
+
+    // Primary charts
+    renderChart('chart-radar', {{ figures.radar | safe }});
+    renderChart('chart-retention-bars', {{ figures.retention_bars | safe }});
+    renderChart('chart-target-bars', {{ figures.target_bars | safe }});
+
+    // Deep analysis charts
+    {% if figures.deep_analysis %}
+    {% if figures.deep_analysis.cka_heatmap is defined and figures.deep_analysis.cka_heatmap %}
+    renderChart('chart-cka', {{ figures.deep_analysis.cka_heatmap | safe }});
+    {% endif %}
+    {% if figures.deep_analysis.ppl_dist is defined and figures.deep_analysis.ppl_dist %}
+    renderChart('chart-ppl', {{ figures.deep_analysis.ppl_dist | safe }});
+    {% endif %}
+    {% if figures.deep_analysis.spectral is defined and figures.deep_analysis.spectral %}
+    renderChart('chart-spectral', {{ figures.deep_analysis.spectral | safe }});
+    {% endif %}
+    {% if figures.deep_analysis.calibration is defined and figures.deep_analysis.calibration %}
+    renderChart('chart-calibration', {{ figures.deep_analysis.calibration | safe }});
+    {% endif %}
+    {% if figures.deep_analysis.activation is defined and figures.deep_analysis.activation %}
+    renderChart('chart-activation', {{ figures.deep_analysis.activation | safe }});
+    {% endif %}
+    {% endif %}
+})();
+</script>
+
+</body>
+</html>

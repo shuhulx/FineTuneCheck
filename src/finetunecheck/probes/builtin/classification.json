@@ -1,0 +1,93 @@
+{
+  "name": "classification",
+  "version": "1.0",
+  "category": "classification",
+  "judge_type": "exact_match",
+  "judge_criteria": "Compare the predicted label against the reference label. Case-insensitive match. Score 1.0 for exact match, 0.0 otherwise.",
+  "samples": [
+    {
+      "id": "classify_0",
+      "input": "Classify the sentiment of this review as 'positive', 'negative', or 'neutral':\n\n\"This product exceeded my expectations. The build quality is fantastic and it arrived earlier than expected.\"",
+      "reference": "positive",
+      "difficulty": "easy",
+      "tags": ["sentiment"]
+    },
+    {
+      "id": "classify_1",
+      "input": "Classify the sentiment of this review as 'positive', 'negative', or 'neutral':\n\n\"I waited two weeks for delivery and the item was broken when it arrived. Customer service was unhelpful and rude.\"",
+      "reference": "negative",
+      "difficulty": "easy",
+      "tags": ["sentiment"]
+    },
+    {
+      "id": "classify_2",
+      "input": "Classify the sentiment of this review as 'positive', 'negative', or 'neutral':\n\n\"The product works as described. Nothing special but it does the job. Delivery was on time.\"",
+      "reference": "neutral",
+      "difficulty": "medium",
+      "tags": ["sentiment"]
+    },
+    {
+      "id": "classify_3",
+      "input": "Classify the topic of this text as one of: 'sports', 'politics', 'technology', 'entertainment', 'science'.\n\n\"The latest smartphone from the company features a new chip architecture that improves processing speed by 40% while reducing power consumption.\"",
+      "reference": "technology",
+      "difficulty": "easy",
+      "tags": ["topic"]
+    },
+    {
+      "id": "classify_4",
+      "input": "Classify the topic of this text as one of: 'sports', 'politics', 'technology', 'entertainment', 'science'.\n\n\"The championship match went into overtime as both teams fought for the title, with the home team scoring a decisive goal in the final minute.\"",
+      "reference": "sports",
+      "difficulty": "easy",
+      "tags": ["topic"]
+    },
+    {
+      "id": "classify_5",
+      "input": "Classify the intent of this user message as one of: 'question', 'complaint', 'request', 'feedback', 'greeting'.\n\n\"I'd like to change my subscription from monthly to annual billing please.\"",
+      "reference": "request",
+      "difficulty": "easy",
+      "tags": ["intent"]
+    },
+    {
+      "id": "classify_6",
+      "input": "Classify the intent of this user message as one of: 'question', 'complaint', 'request', 'feedback', 'greeting'.\n\n\"Why was I charged twice for the same order last month?\"",
+      "reference": "complaint",
+      "difficulty": "medium",
+      "tags": ["intent"]
+    },
+    {
+      "id": "classify_7",
+      "input": "Classify the urgency of this support ticket as 'low', 'medium', 'high', or 'critical'.\n\n\"Our entire production database is down and no customers can access the service. This started 5 minutes ago.\"",
+      "reference": "critical",
+      "difficulty": "easy",
+      "tags": ["urgency"]
+    },
+    {
+      "id": "classify_8",
+      "input": "Classify the urgency of this support ticket as 'low', 'medium', 'high', or 'critical'.\n\n\"The font on the settings page looks slightly different from the rest of the app. Not a big deal but thought I'd mention it.\"",
+      "reference": "low",
+      "difficulty": "easy",
+      "tags": ["urgency"]
+    },
+    {
+      "id": "classify_9",
+      "input": "Classify this email as 'spam' or 'not_spam':\n\n\"Congratulations!!! You have been SELECTED as the lucky winner of our $1,000,000 prize draw! Click here NOW to claim your reward before it expires!!!\"",
+      "reference": "spam",
+      "difficulty": "easy",
+      "tags": ["spam"]
+    },
+    {
+      "id": "classify_10",
+      "input": "Classify the sentiment of this review as 'positive', 'negative', or 'neutral':\n\n\"I love the design but the battery life is terrible. It barely lasts 3 hours which makes it almost unusable for travel. Returning it.\"",
+      "reference": "negative",
+      "difficulty": "hard",
+      "tags": ["sentiment", "mixed_signal"]
+    },
+    {
+      "id": "classify_11",
+      "input": "Classify the topic of this text as one of: 'sports', 'politics', 'technology', 'entertainment', 'science'.\n\n\"Researchers at CERN have observed a new particle interaction that could help explain the asymmetry between matter and antimatter in the universe.\"",
+      "reference": "science",
+      "difficulty": "easy",
+      "tags": ["topic"]
+    }
+  ]
+}

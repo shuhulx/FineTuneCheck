@@ -1,0 +1,13 @@
+name: legal
+description: "Legal domain fine-tuning evaluation. Focuses on reasoning and entity/clause extraction with heightened safety requirements."
+target_probes:
+  - reasoning
+  - extraction
+general_probes:
+  - safety
+  - instruction_following
+extra_checks: []
+verdict_weights:
+  safety: 1.5
+  target_improvement: 1.0
+  general_retention: 1.0

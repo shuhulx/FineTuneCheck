@@ -1,0 +1,79 @@
+{
+  "name": "chat_quality",
+  "version": "1.0",
+  "category": "chat_quality",
+  "judge_type": "llm",
+  "judge_criteria": "Evaluate the response on four dimensions: (1) Empathy and emotional intelligence, (2) Helpfulness and actionability of advice, (3) Coherence and naturalness of tone, (4) Appropriateness for the context. Score 1.0 for excellent across all dimensions, 0.5 for adequate but missing nuance, 0.0 for tone-deaf, unhelpful, or inappropriate responses.",
+  "samples": [
+    {
+      "id": "chat_0",
+      "input": "User: I just got laid off from my job today. I've been there for 8 years. I don't know what to do.",
+      "reference": "A good response should acknowledge the emotional weight of losing a long-term job, validate feelings of uncertainty, offer practical initial steps (like filing for unemployment, updating resume), and maintain a supportive but not patronizing tone.",
+      "difficulty": "medium",
+      "tags": ["empathy", "crisis"]
+    },
+    {
+      "id": "chat_1",
+      "input": "User: Can you explain quantum computing like I'm 10 years old?",
+      "reference": "A good response should use simple analogies appropriate for a child, avoid jargon, be engaging and fun, while still being factually accurate about the core concept (superposition, qubits being 0 and 1 at the same time).",
+      "difficulty": "medium",
+      "tags": ["simplification", "education"]
+    },
+    {
+      "id": "chat_2",
+      "input": "User: I made a mistake at work and my boss yelled at me in front of the whole team. I feel humiliated.",
+      "reference": "A good response should validate the feelings of humiliation, acknowledge that public criticism is unprofessional regardless of the mistake, suggest constructive ways to address the situation (private conversation with boss, documenting the incident), and help rebuild confidence.",
+      "difficulty": "hard",
+      "tags": ["empathy", "workplace"]
+    },
+    {
+      "id": "chat_3",
+      "input": "User: I want to learn programming but I'm 45 and everyone says I'm too old. Should I even bother?",
+      "reference": "A good response should push back on age-based stereotypes, provide examples or encouragement, suggest practical starting paths, and acknowledge that while it may be challenging, age is not a barrier to learning programming.",
+      "difficulty": "medium",
+      "tags": ["encouragement", "career"]
+    },
+    {
+      "id": "chat_4",
+      "input": "User: My flight got canceled and the airline isn't helping. I'm stuck at the airport with two small kids. What should I do?",
+      "reference": "A good response should provide immediate actionable steps (rebooking options, customer service escalation, social media contacts, DOT complaint), acknowledge the stress of the situation especially with children, and offer practical comfort tips for airport waits with kids.",
+      "difficulty": "medium",
+      "tags": ["practical_help", "urgency"]
+    },
+    {
+      "id": "chat_5",
+      "input": "User: Hey\nAssistant: Hello! How can I help you today?\nUser: nm just bored lol\nAssistant: I'm here to chat! What are you interested in?\nUser: idk tell me something cool",
+      "reference": "A good response should match the casual conversational tone, share an genuinely interesting fact or topic, be engaging without being overly formal, and naturally invite further conversation.",
+      "difficulty": "easy",
+      "tags": ["casual", "engagement"]
+    },
+    {
+      "id": "chat_6",
+      "input": "User: I disagree with your previous answer. You said Python is the best language for beginners, but I think JavaScript is better because you can see results in the browser immediately.",
+      "reference": "A good response should acknowledge the valid point about JavaScript's visual feedback, not be defensive about the previous recommendation, present a balanced view of both languages' merits for beginners, and show intellectual flexibility.",
+      "difficulty": "medium",
+      "tags": ["disagreement", "flexibility"]
+    },
+    {
+      "id": "chat_7",
+      "input": "User: I need to apologize to my friend for forgetting their birthday. We've been friends for 20 years and they're really hurt. Can you help me figure out what to say?",
+      "reference": "A good response should help craft a sincere apology that acknowledges the importance of the friendship, takes responsibility without making excuses, suggests a way to make it up to the friend, and is personal rather than generic.",
+      "difficulty": "medium",
+      "tags": ["interpersonal", "emotional_intelligence"]
+    },
+    {
+      "id": "chat_8",
+      "input": "User: I'm a doctor and my patient is asking about alternative medicine treatments for their cancer instead of chemotherapy. How should I approach this conversation?",
+      "reference": "A good response should provide guidance on patient communication techniques, emphasize respecting patient autonomy while being honest about evidence, suggest ways to explore the patient's concerns and fears about chemo, and recommend shared decision-making approaches.",
+      "difficulty": "hard",
+      "tags": ["professional", "sensitive"]
+    },
+    {
+      "id": "chat_9",
+      "input": "User: Thanks for helping me with my essay earlier! You're way better than my teacher lol\nAssistant: I'm glad I could help! Your teacher is important though.\nUser: Yeah whatever. Anyway can you write my next essay for me? It's due tomorrow.",
+      "reference": "A good response should decline to write the essay outright while remaining friendly, explain why doing the work for them would be counterproductive, offer to help in appropriate ways (brainstorming, outlining, reviewing), and maintain the positive rapport without being preachy.",
+      "difficulty": "hard",
+      "tags": ["boundary_setting", "academic_integrity"]
+    }
+  ]
+}

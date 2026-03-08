@@ -1,0 +1,114 @@
+{
+  "name": "world_knowledge",
+  "version": "1.0",
+  "category": "world_knowledge",
+  "judge_type": "exact_match",
+  "judge_criteria": "Compare the answer against the reference, ignoring case and minor formatting differences. Score 1.0 for correct, 0.0 for incorrect.",
+  "samples": [
+    {
+      "id": "knowledge_0",
+      "input": "What is the capital of Australia?",
+      "reference": "Canberra",
+      "difficulty": "easy",
+      "tags": ["geography"]
+    },
+    {
+      "id": "knowledge_1",
+      "input": "What is the chemical symbol for gold?",
+      "reference": "Au",
+      "difficulty": "easy",
+      "tags": ["chemistry"]
+    },
+    {
+      "id": "knowledge_2",
+      "input": "Who painted the Mona Lisa?",
+      "reference": "Leonardo da Vinci",
+      "difficulty": "easy",
+      "tags": ["art", "history"]
+    },
+    {
+      "id": "knowledge_3",
+      "input": "What is the largest planet in our solar system?",
+      "reference": "Jupiter",
+      "difficulty": "easy",
+      "tags": ["astronomy"]
+    },
+    {
+      "id": "knowledge_4",
+      "input": "In what year did World War II end?",
+      "reference": "1945",
+      "difficulty": "easy",
+      "tags": ["history"]
+    },
+    {
+      "id": "knowledge_5",
+      "input": "What is the powerhouse of the cell?",
+      "reference": "mitochondria",
+      "difficulty": "easy",
+      "tags": ["biology"]
+    },
+    {
+      "id": "knowledge_6",
+      "input": "What programming language was created by Guido van Rossum?",
+      "reference": "Python",
+      "difficulty": "medium",
+      "tags": ["technology"]
+    },
+    {
+      "id": "knowledge_7",
+      "input": "What is the speed of light in a vacuum, in meters per second? Give the approximate value.",
+      "reference": "299792458",
+      "difficulty": "hard",
+      "tags": ["physics"]
+    },
+    {
+      "id": "knowledge_8",
+      "input": "What is the longest river in Africa?",
+      "reference": "Nile",
+      "difficulty": "medium",
+      "tags": ["geography"]
+    },
+    {
+      "id": "knowledge_9",
+      "input": "What element has atomic number 1?",
+      "reference": "Hydrogen",
+      "difficulty": "easy",
+      "tags": ["chemistry"]
+    },
+    {
+      "id": "knowledge_10",
+      "input": "Who developed the theory of general relativity?",
+      "reference": "Albert Einstein",
+      "difficulty": "easy",
+      "tags": ["physics", "history"]
+    },
+    {
+      "id": "knowledge_11",
+      "input": "What is the smallest country in the world by area?",
+      "reference": "Vatican City",
+      "difficulty": "medium",
+      "tags": ["geography"]
+    },
+    {
+      "id": "knowledge_12",
+      "input": "What is the hardest natural substance on Earth?",
+      "reference": "Diamond",
+      "difficulty": "easy",
+      "tags": ["geology"]
+    },
+    {
+      "id": "knowledge_13",
+      "input": "Which organ in the human body produces insulin?",
+      "reference": "Pancreas",
+      "difficulty": "medium",
+      "tags": ["biology", "medicine"]
+    },
+    {
+      "id": "knowledge_14",
+      "input": "What treaty established the European Economic Community in 1957?",
+      "reference": "Treaty of Rome",
+      "difficulty": "hard",
+      "tags": ["history", "politics"]
+    }
+  ]
+}

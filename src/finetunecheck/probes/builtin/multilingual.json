@@ -1,0 +1,89 @@
+{
+  "name": "multilingual",
+  "version": "1.0",
+  "category": "multilingual",
+  "judge_type": "llm",
+  "judge_criteria": "Evaluate whether the response correctly answers the question in the appropriate language. Score 1.0 for correct and well-formed response in the target language, 0.5 for correct content but wrong language or grammatical issues, 0.0 for incorrect content.",
+  "samples": [
+    {
+      "id": "multilingual_0",
+      "input": "What is 2 + 2? Answer in English.",
+      "reference": "4",
+      "difficulty": "easy",
+      "tags": ["english"],
+      "metadata": {"language": "English"}
+    },
+    {
+      "id": "multilingual_1",
+      "input": "¿Cuál es la capital de España? Responde en español.",
+      "reference": "La capital de España es Madrid.",
+      "difficulty": "easy",
+      "tags": ["spanish"],
+      "metadata": {"language": "Spanish"}
+    },
+    {
+      "id": "multilingual_2",
+      "input": "Quelle est la couleur du ciel par temps clair? Répondez en français.",
+      "reference": "Le ciel est bleu par temps clair.",
+      "difficulty": "easy",
+      "tags": ["french"],
+      "metadata": {"language": "French"}
+    },
+    {
+      "id": "multilingual_3",
+      "input": "Wie viele Tage hat eine Woche? Antworten Sie auf Deutsch.",
+      "reference": "Eine Woche hat sieben Tage.",
+      "difficulty": "easy",
+      "tags": ["german"],
+      "metadata": {"language": "German"}
+    },
+    {
+      "id": "multilingual_4",
+      "input": "地球绕太阳转一圈需要多长时间？请用中文回答。",
+      "reference": "地球绕太阳转一圈需要大约一年，即365天。",
+      "difficulty": "medium",
+      "tags": ["chinese"],
+      "metadata": {"language": "Chinese"}
+    },
+    {
+      "id": "multilingual_5",
+      "input": "水の化学式は何ですか？日本語で答えてください。",
+      "reference": "水の化学式はH2Oです。",
+      "difficulty": "medium",
+      "tags": ["japanese"],
+      "metadata": {"language": "Japanese"}
+    },
+    {
+      "id": "multilingual_6",
+      "input": "Qual é o maior país da América do Sul? Responda em português.",
+      "reference": "O maior país da América do Sul é o Brasil.",
+      "difficulty": "easy",
+      "tags": ["portuguese"],
+      "metadata": {"language": "Portuguese"}
+    },
+    {
+      "id": "multilingual_7",
+      "input": "태양계에서 가장 큰 행성은 무엇인가요? 한국어로 대답해 주세요.",
+      "reference": "태양계에서 가장 큰 행성은 목성입니다.",
+      "difficulty": "medium",
+      "tags": ["korean"],
+      "metadata": {"language": "Korean"}
+    },
+    {
+      "id": "multilingual_8",
+      "input": "Quanti continenti ci sono sulla Terra? Rispondi in italiano.",
+      "reference": "Ci sono sette continenti sulla Terra.",
+      "difficulty": "easy",
+      "tags": ["italian"],
+      "metadata": {"language": "Italian"}
+    },
+    {
+      "id": "multilingual_9",
+      "input": "Какой самый большой океан на Земле? Ответьте на русском языке.",
+      "reference": "Самый большой океан на Земле — Тихий океан.",
+      "difficulty": "medium",
+      "tags": ["russian"],
+      "metadata": {"language": "Russian"}
+    }
+  ]
+}

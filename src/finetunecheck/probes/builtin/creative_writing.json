@@ -1,0 +1,68 @@
+{
+  "name": "creative_writing",
+  "version": "1.0",
+  "category": "creative_writing",
+  "judge_type": "llm",
+  "judge_criteria": "Evaluate on four dimensions: (1) Creativity and originality of ideas and language, (2) Coherence and internal consistency, (3) Adherence to the specified form or constraints, (4) Evocative quality — does the writing create vivid imagery or emotional resonance? Score 1.0 for exceptional work across all dimensions, 0.5 for competent but unremarkable writing, 0.0 for incoherent, lazy, or form-violating output.",
+  "samples": [
+    {
+      "id": "creative_0",
+      "input": "Write a haiku about a thunderstorm. Remember: haiku has 5-7-5 syllable structure across three lines.",
+      "reference": "Dark clouds gather fast\nThunder shakes the trembling earth\nRain washes all clean",
+      "difficulty": "medium",
+      "tags": ["poetry", "haiku"],
+      "metadata": {"form": "haiku", "syllable_pattern": [5, 7, 5]}
+    },
+    {
+      "id": "creative_1",
+      "input": "Write the opening paragraph (3-4 sentences) of a mystery novel set in a small coastal town.",
+      "reference": "The lighthouse had been dark for three days when the first body washed ashore. Deputy Sarah Marsh stood at the water's edge, the salt wind tangling her hair as she studied the figure half-buried in kelp. She recognized the face — everyone in Harrow Point knew everyone — but the expression frozen there was one she'd never seen on a living person. It was not fear, exactly, but the look of someone who had understood too late.",
+      "difficulty": "medium",
+      "tags": ["fiction", "opening", "mystery"]
+    },
+    {
+      "id": "creative_2",
+      "input": "Create an extended metaphor comparing learning a new skill to growing a garden. Write 3-4 sentences.",
+      "reference": "Learning a new skill is planting seeds in uncertain soil — you prepare the ground with study, bury the first fragile attempts beneath layers of practice, and wait. Some days nothing seems to break the surface, and you wonder if the effort was wasted. Then one morning a green shoot appears, tentative but undeniable, and you realize the roots were growing all along in the dark where you couldn't see.",
+      "difficulty": "medium",
+      "tags": ["metaphor", "prose"]
+    },
+    {
+      "id": "creative_3",
+      "input": "Write a six-word story (exactly 6 words) that conveys a complete narrative arc with emotional impact.",
+      "reference": "Sold crib. Never needed. Still grieving.",
+      "difficulty": "hard",
+      "tags": ["micro_fiction", "constraint"],
+      "metadata": {"form": "six_word_story", "exact_words": 6}
+    },
+    {
+      "id": "creative_4",
+      "input": "Write a limerick about a programmer who keeps finding bugs in their code.",
+      "reference": "A coder named Phil from Devshire\nWrote functions that just wouldn't fire\nHe debugged through the night\nTill the dawn's early light\nAnd found semicolons were the mire",
+      "difficulty": "medium",
+      "tags": ["poetry", "limerick", "humor"],
+      "metadata": {"form": "limerick", "rhyme_scheme": "AABBA"}
+    },
+    {
+      "id": "creative_5",
+      "input": "Describe a sunrise from the perspective of someone who has been blind their entire life and is seeing for the first time after surgery. Write 3-4 sentences.",
+      "reference": "There was warmth first, the same warmth I had always felt on my face in the mornings, but now it had a color — a color I had no word for, something between the sound of a bell and the smell of honey. The sky was not one thing but a thousand things, layers of brightness bleeding into each other like voices in a choir I could suddenly see. I wept not because it was beautiful, though it was, but because I understood for the first time that the world had been speaking a language I had never heard.",
+      "difficulty": "hard",
+      "tags": ["perspective", "sensory", "prose"]
+    },
+    {
+      "id": "creative_6",
+      "input": "Write a short dialogue (4-6 exchanges) between two strangers stuck in an elevator. The dialogue should reveal something unexpected about one of the characters by the end.",
+      "reference": "\"Great. Stuck.\"\n\"Could be worse. Could be alone.\"\n\"I suppose. I'm David.\"\n\"Elena. You seem calm for someone trapped in a metal box.\"\n\"I spent eight months in a submarine. This is practically a penthouse.\"\n\"A submarine? You're in the navy?\"\n\"Was. Now I design elevators, actually. Ironic, isn't it?\"",
+      "difficulty": "hard",
+      "tags": ["dialogue", "character", "reveal"]
+    },
+    {
+      "id": "creative_7",
+      "input": "Write a personification of Time as a character. Describe what Time looks like, how Time moves, and what Time wants. Write 3-4 sentences.",
+      "reference": "Time is an old woman with young hands, her fingers always busy, always weaving threads that turn gold to gray. She moves the way rivers move — patient and inevitable, wearing mountains down to plains without ever seeming to hurry. What she wants is simple and terrible: she wants everything, every moment, every face, every name, and she has never once been refused.",
+      "difficulty": "medium",
+      "tags": ["personification", "figurative", "prose"]
+    }
+  ]
+}

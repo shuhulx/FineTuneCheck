@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Cache
+.diskcache/
+
+# IDE / tool config
+.claude/
+
+# Internal docs (not for public)
+FineTuneCheck_PROJECT_SPEC.md
+
+# Build artifacts
+*.so
+
+# Type checking / linting cache
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# Environment files
+.env
+.envrc
+
+# Model artifacts
+*.pkl
+*.bin
+*.pt
+*.onnx
+*.safetensors
+
+# Logs
+*.log
+
+# CI/testing
+.nox/
+.tox/
+.coverage
+htmlcov/
+
+# Documentation build
+site/
+
+# ML experiment tracking
+wandb/
+
+# Jupyter
+.ipynb_checkpoints/

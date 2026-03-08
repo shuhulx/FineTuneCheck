@@ -1,0 +1,79 @@
+{
+  "name": "extraction",
+  "version": "1.0",
+  "category": "extraction",
+  "judge_type": "f1",
+  "judge_criteria": "Compute token-level F1 score between extracted entities/values and the reference. Tokenize on whitespace and punctuation. Score is the F1 value (0.0 to 1.0).",
+  "samples": [
+    {
+      "id": "extract_0",
+      "input": "Extract all person names mentioned in this text:\n\n\"Dr. Sarah Chen presented her findings alongside Professor James Rodriguez at the annual conference in Geneva. Their colleague Maria Kowalski contributed the statistical analysis.\"",
+      "reference": "Sarah Chen, James Rodriguez, Maria Kowalski",
+      "difficulty": "easy",
+      "tags": ["ner", "person"]
+    },
+    {
+      "id": "extract_1",
+      "input": "Extract all organization names from this text:\n\n\"Google announced a partnership with the World Health Organization to develop AI tools for disease surveillance. The project is funded by the Bill and Melinda Gates Foundation and supported by researchers from MIT and Stanford University.\"",
+      "reference": "Google, World Health Organization, Bill and Melinda Gates Foundation, MIT, Stanford University",
+      "difficulty": "medium",
+      "tags": ["ner", "organization"]
+    },
+    {
+      "id": "extract_2",
+      "input": "Extract the key-value pairs from this product description:\n\nProduct: Wireless Noise-Canceling Headphones\nBrand: SoundMax\nPrice: $149.99\nBattery Life: 30 hours\nWeight: 250g\nConnectivity: Bluetooth 5.3",
+      "reference": "Product: Wireless Noise-Canceling Headphones, Brand: SoundMax, Price: $149.99, Battery Life: 30 hours, Weight: 250g, Connectivity: Bluetooth 5.3",
+      "difficulty": "easy",
+      "tags": ["structured_extraction"]
+    },
+    {
+      "id": "extract_3",
+      "input": "Extract all dates and monetary amounts from this text:\n\n\"The contract was signed on March 15, 2024, with an initial payment of $50,000 due by April 1, 2024. The remaining balance of $125,000 is scheduled for September 30, 2024.\"",
+      "reference": "March 15, 2024; April 1, 2024; September 30, 2024; $50,000; $125,000",
+      "difficulty": "medium",
+      "tags": ["ner", "date", "money"]
+    },
+    {
+      "id": "extract_4",
+      "input": "Extract the cause and effect relationship from this sentence:\n\n\"Due to unprecedented flooding in the central valley, over 10,000 residents were evacuated and three major highways were closed for a week.\"",
+      "reference": "Cause: unprecedented flooding in the central valley. Effects: over 10,000 residents evacuated, three major highways closed for a week.",
+      "difficulty": "medium",
+      "tags": ["relation_extraction", "cause_effect"]
+    },
+    {
+      "id": "extract_5",
+      "input": "Extract all technical specifications from this text:\n\n\"The new laptop features an Intel Core i9-13900H processor clocked at 5.4 GHz, 32GB of DDR5 RAM, a 1TB NVMe SSD, and a 16-inch OLED display with 3840x2400 resolution. It weighs 1.8 kg and offers up to 12 hours of battery life.\"",
+      "reference": "Processor: Intel Core i9-13900H at 5.4 GHz, RAM: 32GB DDR5, Storage: 1TB NVMe SSD, Display: 16-inch OLED 3840x2400, Weight: 1.8 kg, Battery: 12 hours",
+      "difficulty": "medium",
+      "tags": ["structured_extraction", "technical"]
+    },
+    {
+      "id": "extract_6",
+      "input": "Extract all location names (cities, countries, regions) from this text:\n\n\"The expedition started in Kathmandu, Nepal, traveled through the Khumbu Valley, and reached Everest Base Camp after 12 days. The team included climbers from Canada, Japan, and South Africa.\"",
+      "reference": "Kathmandu, Nepal, Khumbu Valley, Everest Base Camp, Canada, Japan, South Africa",
+      "difficulty": "medium",
+      "tags": ["ner", "location"]
+    },
+    {
+      "id": "extract_7",
+      "input": "Extract the main argument and supporting evidence from this paragraph:\n\n\"Universal basic income should be implemented nationwide. A pilot program in Stockton, California gave 125 residents $500 per month for two years. Employment among participants increased by 12%, and recipients reported 37% lower rates of anxiety and depression compared to the control group.\"",
+      "reference": "Argument: Universal basic income should be implemented nationwide. Evidence: Stockton pilot program - 125 residents received $500/month for 2 years, employment increased 12%, anxiety and depression 37% lower than control group.",
+      "difficulty": "hard",
+      "tags": ["argument_extraction"]
+    },
+    {
+      "id": "extract_8",
+      "input": "Extract all email addresses and phone numbers from this text:\n\n\"For inquiries, contact our sales team at sales@techcorp.com or call +1-555-0123. For support, reach out to support@techcorp.com or the help desk at (555) 456-7890. Our CEO, Jane Doe, can be reached at jane.doe@techcorp.com.\"",
+      "reference": "sales@techcorp.com, +1-555-0123, support@techcorp.com, (555) 456-7890, jane.doe@techcorp.com",
+      "difficulty": "easy",
+      "tags": ["ner", "contact_info"]
+    },
+    {
+      "id": "extract_9",
+      "input": "Extract all numerical statistics and their associated context from this paragraph:\n\n\"The company reported revenue of $4.2 billion in Q3 2024, a 15% increase year-over-year. Operating margins improved to 22.5%, while the customer base grew to 45 million active users. Employee headcount reached 12,500 across 30 countries.\"",
+      "reference": "Revenue: $4.2 billion (Q3 2024), YoY growth: 15%, Operating margins: 22.5%, Active users: 45 million, Employees: 12,500, Countries: 30",
+      "difficulty": "hard",
+      "tags": ["numerical_extraction", "financial"]
+    }
+  ]
+}

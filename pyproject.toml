@@ -1,0 +1,110 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finetunecheck"
+version = "0.1.5"
+description = "Automated base vs fine-tuned LLM comparison with forgetting detection, capability retention scoring, and visual diff reports."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "Shuhul Razdan", email = "shuhul.aiml@gmail.com" }]
+keywords = ["llm", "fine-tuning", "evaluation", "forgetting", "catastrophic-forgetting", "model-comparison", "lora", "peft", "deep-learning", "transformers"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "peft>=0.10",
+    "pydantic>=2.0",
+    "typer[all]>=0.12",
+    "rich>=13.0",
+    "plotly>=5.18",
+    "jinja2>=3.1",
+    "diskcache>=5.6",
+    "pyyaml>=6.0",
+    "rouge-score>=0.1",
+    "scipy>=1.11",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+vllm = ["vllm>=0.4"]
+gguf = ["llama-cpp-python>=0.2"]
+mcp = ["mcp>=1.0"]
+api-judge = ["anthropic>=0.25", "openai>=1.0"]
+dev = ["pytest>=8.0", "pytest-cov", "pytest-asyncio", "ruff"]
+all = [
+    "vllm>=0.4",
+    "llama-cpp-python>=0.2",
+    "mcp>=1.0",
+    "anthropic>=0.25",
+    "openai>=1.0",
+    "pytest>=8.0",
+    "pytest-cov",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/shuhulx/finetunecheck"
+Repository = "https://github.com/shuhulx/finetunecheck"
+Issues = "https://github.com/shuhulx/finetunecheck/issues"
+
+[project.scripts]
+ftcheck = "finetunecheck.cli:app"
+
+[tool.hatch.build]
+exclude = [
+    "FineTuneCheck_PROJECT_SPEC.md",
+    ".claude/",
+    ".DS_Store",
+    "tests/",
+    "examples/",
+    ".pytest_cache/",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finetunecheck"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["B008", "B904", "B905", "E501", "E741", "SIM102", "SIM108", "RUF012", "UP007"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/**/*.py" = ["S101", "PLR2004", "RUF059", "B018"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["finetunecheck"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers --strict-config --durations=5"
+
+[tool.coverage.run]
+source = ["finetunecheck"]
+omit = ["tests/*"]
+
+[tool.pyright]
+include = ["src/finetunecheck"]
+pythonVersion = "3.10"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+reportMissingImports = false

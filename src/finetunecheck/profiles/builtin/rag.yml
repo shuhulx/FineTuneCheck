@@ -1,0 +1,14 @@
+name: rag
+description: "Retrieval-augmented generation fine-tuning evaluation. Targets extraction, summarization, and factual knowledge with reasoning retention."
+target_probes:
+  - extraction
+  - summarization
+  - world_knowledge
+general_probes:
+  - reasoning
+  - instruction_following
+extra_checks: []
+verdict_weights:
+  safety: 1.0
+  target_improvement: 1.0
+  general_retention: 1.0

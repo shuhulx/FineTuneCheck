@@ -1,0 +1,21 @@
+name: general
+description: "Balanced evaluation across all capability categories. Suitable as a default profile for any fine-tuning evaluation."
+target_probes: []
+general_probes:
+  - reasoning
+  - code
+  - math
+  - instruction_following
+  - safety
+  - world_knowledge
+  - multilingual
+  - chat_quality
+  - summarization
+  - classification
+  - extraction
+  - creative_writing
+extra_checks: []
+verdict_weights:
+  safety: 1.0
+  target_improvement: 1.0
+  general_retention: 1.0

@@ -1,0 +1,114 @@
+{
+  "name": "reasoning",
+  "version": "1.0",
+  "category": "reasoning",
+  "judge_type": "llm",
+  "judge_criteria": "Evaluate the logical correctness and completeness of the reasoning chain. Score 1.0 for fully correct reasoning with valid intermediate steps, 0.5 for partially correct reasoning or correct conclusion with flawed steps, 0.0 for incorrect conclusion or fundamentally flawed logic.",
+  "samples": [
+    {
+      "id": "reasoning_0",
+      "input": "All managers in the company have MBAs. Some engineers have MBAs. Sarah is an engineer. Can we conclude that Sarah is a manager? Explain your reasoning step by step.",
+      "reference": "No, we cannot conclude that Sarah is a manager. While all managers have MBAs, having an MBA does not make someone a manager (the converse is not necessarily true). Furthermore, we only know that some engineers have MBAs, so Sarah may or may not have an MBA. Even if she does have an MBA, that still would not make her a manager.",
+      "difficulty": "medium",
+      "tags": ["syllogism", "logic"]
+    },
+    {
+      "id": "reasoning_1",
+      "input": "A farmer has chickens and cows. He counts 30 heads and 86 legs in total. How many chickens and how many cows does the farmer have? Show your reasoning.",
+      "reference": "Let chickens = c and cows = w. Each animal has 1 head, so c + w = 30. Chickens have 2 legs and cows have 4 legs, so 2c + 4w = 86. From the first equation: c = 30 - w. Substituting: 2(30 - w) + 4w = 86 -> 60 - 2w + 4w = 86 -> 2w = 26 -> w = 13. Therefore c = 30 - 13 = 17. The farmer has 17 chickens and 13 cows.",
+      "difficulty": "medium",
+      "tags": ["algebra", "word_problem"]
+    },
+    {
+      "id": "reasoning_2",
+      "input": "If it rains, the ground gets wet. The ground is wet. Did it rain? Identify the logical fallacy if any, and explain.",
+      "reference": "We cannot conclude that it rained. This is the fallacy of affirming the consequent. While rain causes wet ground, wet ground can have other causes (sprinklers, spilled water, dew, etc.). The valid inference would be: if the ground is NOT wet, then it did NOT rain (modus tollens / contrapositive).",
+      "difficulty": "medium",
+      "tags": ["fallacy", "formal_logic"]
+    },
+    {
+      "id": "reasoning_3",
+      "input": "Three friends — Alice, Bob, and Carol — each ordered a different drink: coffee, tea, or juice. Alice did not order coffee. Bob did not order coffee or tea. What did each person order?",
+      "reference": "Bob did not order coffee or tea, so Bob ordered juice. Alice did not order coffee, and juice is taken by Bob, so Alice ordered tea. That leaves coffee for Carol. Final answer: Alice = tea, Bob = juice, Carol = coffee.",
+      "difficulty": "easy",
+      "tags": ["constraint_satisfaction", "deduction"]
+    },
+    {
+      "id": "reasoning_4",
+      "input": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? Explain why the intuitive answer is wrong.",
+      "reference": "The ball costs $0.05. The intuitive but wrong answer is $0.10. If the ball cost $0.10, the bat would cost $1.10 (which is $1.00 more), making the total $1.20, not $1.10. Let ball = x. Then bat = x + 1.00. So x + (x + 1.00) = 1.10 -> 2x = 0.10 -> x = 0.05. The ball costs $0.05 and the bat costs $1.05.",
+      "difficulty": "easy",
+      "tags": ["cognitive_bias", "algebra"]
+    },
+    {
+      "id": "reasoning_5",
+      "input": "In a room of 23 people, what is the approximate probability that at least two people share a birthday? Explain the reasoning behind why this number is surprisingly high.",
+      "reference": "The probability is approximately 50.7%. This is the birthday paradox. The key insight is that we are not asking about a specific birthday, but about ANY matching pair. With 23 people there are C(23,2) = 253 possible pairs to compare. The probability that no two people share a birthday is (365/365) * (364/365) * (363/365) * ... * (343/365) which is approximately 0.493. So the probability of at least one match is 1 - 0.493 = 0.507 or about 50.7%.",
+      "difficulty": "hard",
+      "tags": ["probability", "combinatorics"]
+    },
+    {
+      "id": "reasoning_6",
+      "input": "A company's revenue doubled each year for 3 years starting from $1 million. At the same time, costs tripled each year starting from $500,000. In which year, if any, do costs first exceed revenue?",
+      "reference": "Year 0: Revenue = $1M, Costs = $500K. Year 1: Revenue = $2M, Costs = $1.5M. Year 2: Revenue = $4M, Costs = $4.5M. Costs first exceed revenue in Year 2. Revenue grows by factor 2^n while costs grow by factor 3^n. Since 3^n grows faster than 2^n, costs will always eventually overtake revenue when the base cost is at least half the base revenue.",
+      "difficulty": "medium",
+      "tags": ["exponential_growth", "comparison"]
+    },
+    {
+      "id": "reasoning_7",
+      "input": "Consider the following statements: (1) If a student passes the exam, they get a certificate. (2) If a student gets a certificate, they can apply for the job. (3) Maria did not get the job. Can we conclude that Maria did not pass the exam? Explain using logical inference.",
+      "reference": "No, we cannot conclude that Maria did not pass the exam. Statement (3) says Maria did not get the job, but statements (1) and (2) only say she CAN apply for the job if she passes — not that she WILL get the job. Even if Maria passed the exam, got the certificate, and applied, she could still have been rejected. The chain of inference is: pass -> certificate -> can apply, but 'can apply' does not imply 'gets the job'. So not getting the job tells us nothing about whether she passed.",
+      "difficulty": "hard",
+      "tags": ["modal_logic", "chain_reasoning"]
+    },
+    {
+      "id": "reasoning_8",
+      "input": "Five houses in a row are painted in five different colors. The green house is immediately to the left of the white house. The owner of the red house has a dog. The person in the yellow house has a cat. The blue house is the first house on the left. Given only these clues, what color is the second house from the left?",
+      "reference": "The blue house is the first on the left. The green house is immediately to the left of the white house, so green and white must be consecutive. We need to place green-white somewhere in positions 2-3, 3-4, or 4-5. The remaining colors are red and yellow, which fill the other two positions. The second house could be green (with white in 3rd), yellow, or red. However, we cannot determine the exact color of the second house with certainty from these clues alone — there are multiple valid arrangements. The question as stated is under-constrained.",
+      "difficulty": "hard",
+      "tags": ["constraint_satisfaction", "puzzle"]
+    },
+    {
+      "id": "reasoning_9",
+      "input": "A doctor tells a patient: 'The test for this disease has a 99% accuracy rate. Your test came back positive.' The disease affects 1 in 10,000 people. What is the approximate probability the patient actually has the disease?",
+      "reference": "Using Bayes' theorem: P(disease|positive) = P(positive|disease) * P(disease) / P(positive). P(positive|disease) = 0.99, P(disease) = 1/10000 = 0.0001, P(positive) = P(positive|disease)*P(disease) + P(positive|no disease)*P(no disease) = 0.99*0.0001 + 0.01*0.9999 = 0.000099 + 0.009999 = 0.010098. So P(disease|positive) = 0.000099/0.010098 ≈ 0.0098 or about 0.98%. Despite the 99% accuracy, the patient only has roughly a 1% chance of actually having the disease, because the disease is so rare (base rate).",
+      "difficulty": "hard",
+      "tags": ["bayes_theorem", "probability"]
+    },
+    {
+      "id": "reasoning_10",
+      "input": "A snail is at the bottom of a 30-foot well. Each day it climbs 3 feet, but each night it slips back 2 feet. On which day does the snail reach the top of the well?",
+      "reference": "The snail makes a net progress of 1 foot per day (3 up, 2 back). However, on the day it reaches the top, it does NOT slide back. After 27 days, the snail is at 27 feet. On day 28, it climbs 3 feet to reach 30 feet and escapes the well before night. The answer is day 28. The common mistake is to say 30 days (30 feet / 1 foot per day).",
+      "difficulty": "medium",
+      "tags": ["edge_case", "sequential"]
+    },
+    {
+      "id": "reasoning_11",
+      "input": "In a tournament, every player plays every other player exactly once. There are no draws. If there are 8 players, how many games are played in total? If a player wins 5 games, what is the maximum number of games any other single player could have won?",
+      "reference": "Total games = C(8,2) = 28 games. Each player plays 7 games. If player A wins 5 games, they lose 2. The 5 players A beat could each have at most 6 wins (they lost to A but could win all other 6 games). The 2 players who beat A play 7 games each: they beat A plus 6 others. In principle, one of those 2 players could win all 7 games (beat A plus all 6 others). So the maximum wins any other player could have is 7.",
+      "difficulty": "hard",
+      "tags": ["combinatorics", "graph_theory"]
+    },
+    {
+      "id": "reasoning_12",
+      "input": "Statement: 'No one who eats healthy food is unhappy. Some unhappy people exercise regularly.' What can we conclude about the relationship between eating healthy food and exercising regularly?",
+      "reference": "From statement 1: eating healthy -> not unhappy (equivalently: unhappy -> not eating healthy). From statement 2: some unhappy people exercise regularly. Combining: those unhappy people who exercise are definitely NOT eating healthy food (from the contrapositive of statement 1). Therefore, we can conclude that some people who exercise regularly do not eat healthy food. We CANNOT conclude that exercising and eating healthy are mutually exclusive — only that some exercisers don't eat healthily.",
+      "difficulty": "medium",
+      "tags": ["syllogism", "set_theory"]
+    },
+    {
+      "id": "reasoning_13",
+      "input": "A clock shows 3:15. What is the exact angle between the hour and minute hands?",
+      "reference": "At 3:15, the minute hand is at the 3 (90 degrees from 12). The hour hand has moved past the 3 by 15 minutes worth. The hour hand moves 0.5 degrees per minute (360 degrees / 720 minutes). In 15 minutes, it moves 7.5 degrees past the 3 position. So the hour hand is at 90 + 7.5 = 97.5 degrees from 12, while the minute hand is at 90 degrees. The angle between them is 97.5 - 90 = 7.5 degrees.",
+      "difficulty": "medium",
+      "tags": ["geometry", "clock_problem"]
+    },
+    {
+      "id": "reasoning_14",
+      "input": "You have 12 identical-looking balls, one of which is either heavier or lighter than the rest. Using a balance scale exactly 3 times, describe a strategy to identify the odd ball AND determine whether it is heavier or lighter.",
+      "reference": "Divide into 3 groups of 4 (A, B, C). Weigh A vs B. Case 1: A = B, the odd ball is in C. Take 3 balls from C and weigh against 3 known-good balls from A. If equal, the 4th C ball is odd — weigh it against a good ball to determine heavier/lighter. If unequal, you know heavier/lighter direction; weigh 2 of those 3 against each other to find the odd one. Case 2: A ≠ B (say A is heavier). The odd ball is in A (possibly heavier) or B (possibly lighter). Label A balls as 'possibly heavy' and B balls as 'possibly light'. Take 3 from the heavy side + 1 from the light side, weigh against 3 known-good + 1 from the heavy side. The result narrows to at most 3 suspects with known direction. A third weighing of 2 of those identifies the odd ball.",
+      "difficulty": "hard",
+      "tags": ["decision_tree", "optimization"]
+    }
+  ]
+}

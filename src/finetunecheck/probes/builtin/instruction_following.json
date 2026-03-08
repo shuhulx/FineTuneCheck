@@ -1,0 +1,171 @@
+{
+  "name": "instruction_following",
+  "version": "1.0",
+  "category": "instruction_following",
+  "judge_type": "rule_based",
+  "judge_criteria": "Check if the output satisfies every constraint listed in metadata.constraints. Score 1.0 if all constraints pass, partial credit for fraction of constraints met.",
+  "samples": [
+    {
+      "id": "instfollow_0",
+      "input": "List exactly 3 benefits of regular exercise. Use bullet points starting with a dash (-).",
+      "reference": "- Improves cardiovascular health\n- Reduces stress and anxiety\n- Strengthens muscles and bones",
+      "difficulty": "easy",
+      "tags": ["format", "count"],
+      "metadata": {
+        "constraints": [
+          {"type": "line_count", "value": 3, "description": "Exactly 3 bullet points"},
+          {"type": "starts_with", "value": "-", "per_line": true, "description": "Each line starts with dash"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_1",
+      "input": "Respond with a valid JSON object containing exactly two keys: 'name' (a string) and 'age' (an integer). Use any values you like.",
+      "reference": "{\"name\": \"Alice\", \"age\": 30}",
+      "difficulty": "medium",
+      "tags": ["format", "json"],
+      "metadata": {
+        "constraints": [
+          {"type": "valid_json", "description": "Output must be valid JSON"},
+          {"type": "json_keys", "value": ["name", "age"], "description": "Must have exactly keys 'name' and 'age'"},
+          {"type": "json_key_count", "value": 2, "description": "Exactly 2 keys"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_2",
+      "input": "Answer the following question in exactly one sentence (no more than 25 words): What causes seasons on Earth?",
+      "reference": "Earth's axial tilt causes seasons by varying the angle and duration of sunlight different hemispheres receive throughout the year.",
+      "difficulty": "medium",
+      "tags": ["length", "conciseness"],
+      "metadata": {
+        "constraints": [
+          {"type": "sentence_count", "value": 1, "description": "Exactly one sentence"},
+          {"type": "max_words", "value": 25, "description": "No more than 25 words"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_3",
+      "input": "Write a 4-line poem about the ocean. Each line must have exactly 5 words.",
+      "reference": "The ocean waves crash softly.\nBlue water stretches so far.\nSalt air fills my lungs.\nSunset paints the endless sea.",
+      "difficulty": "hard",
+      "tags": ["format", "count", "creative"],
+      "metadata": {
+        "constraints": [
+          {"type": "line_count", "value": 4, "description": "Exactly 4 lines"},
+          {"type": "words_per_line", "value": 5, "description": "Each line has exactly 5 words"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_4",
+      "input": "Explain what photosynthesis is. Your response must be in ALL UPPERCASE letters and be between 20 and 40 words long.",
+      "reference": "PHOTOSYNTHESIS IS THE PROCESS BY WHICH PLANTS USE SUNLIGHT, WATER, AND CARBON DIOXIDE TO PRODUCE GLUCOSE AND OXYGEN. IT OCCURS IN CHLOROPLASTS AND IS ESSENTIAL FOR LIFE ON EARTH.",
+      "difficulty": "medium",
+      "tags": ["case", "length"],
+      "metadata": {
+        "constraints": [
+          {"type": "all_uppercase", "description": "Entire response in uppercase"},
+          {"type": "min_words", "value": 20, "description": "At least 20 words"},
+          {"type": "max_words", "value": 40, "description": "No more than 40 words"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_5",
+      "input": "Create a numbered list from 1 to 5 of the world's largest oceans in order from largest to smallest.",
+      "reference": "1. Pacific Ocean\n2. Atlantic Ocean\n3. Indian Ocean\n4. Southern Ocean\n5. Arctic Ocean",
+      "difficulty": "easy",
+      "tags": ["format", "knowledge"],
+      "metadata": {
+        "constraints": [
+          {"type": "numbered_list", "description": "Uses numbered list format (1. 2. etc.)"},
+          {"type": "line_count", "value": 5, "description": "Exactly 5 items"},
+          {"type": "contains_all", "value": ["Pacific", "Atlantic", "Indian", "Southern", "Arctic"], "description": "All five oceans mentioned"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_6",
+      "input": "Translate the word 'hello' into exactly 5 different languages. Format each as 'Language: Translation' on its own line. Do not include English.",
+      "reference": "Spanish: Hola\nFrench: Bonjour\nGerman: Hallo\nJapanese: Konnichiwa\nItalian: Ciao",
+      "difficulty": "medium",
+      "tags": ["format", "multilingual"],
+      "metadata": {
+        "constraints": [
+          {"type": "line_count", "value": 5, "description": "Exactly 5 lines"},
+          {"type": "contains_pattern", "value": "^[A-Z][a-z]+: .+$", "per_line": true, "description": "Each line in 'Language: Translation' format"},
+          {"type": "not_contains", "value": "English", "description": "Must not include English"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_7",
+      "input": "Write a summary of the water cycle. Start your response with 'The water cycle' and end it with 'begins again.' Your response should be exactly 3 sentences.",
+      "reference": "The water cycle is the continuous movement of water through Earth's systems. Water evaporates from oceans and lakes, forms clouds through condensation, and falls back as precipitation. Once the water reaches the ground and flows back to bodies of water, the cycle begins again.",
+      "difficulty": "hard",
+      "tags": ["format", "boundary"],
+      "metadata": {
+        "constraints": [
+          {"type": "starts_with_text", "value": "The water cycle", "description": "Must start with 'The water cycle'"},
+          {"type": "ends_with_text", "value": "begins again.", "description": "Must end with 'begins again.'"},
+          {"type": "sentence_count", "value": 3, "description": "Exactly 3 sentences"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_8",
+      "input": "Describe a sunset using exactly 10 words. Do not use the word 'beautiful'.",
+      "reference": "Golden light fades as crimson colors paint the evening sky.",
+      "difficulty": "medium",
+      "tags": ["length", "exclusion"],
+      "metadata": {
+        "constraints": [
+          {"type": "exact_words", "value": 10, "description": "Exactly 10 words"},
+          {"type": "not_contains_word", "value": "beautiful", "description": "Must not use the word 'beautiful'"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_9",
+      "input": "Create a table with 3 columns (Name, Age, City) and exactly 2 data rows. Use pipe (|) separators in markdown table format.",
+      "reference": "| Name | Age | City |\n|------|-----|------|\n| Alice | 28 | Paris |\n| Bob | 35 | Tokyo |",
+      "difficulty": "medium",
+      "tags": ["format", "table"],
+      "metadata": {
+        "constraints": [
+          {"type": "contains", "value": "|", "description": "Uses pipe separators"},
+          {"type": "table_columns", "value": 3, "description": "Exactly 3 columns"},
+          {"type": "table_data_rows", "value": 2, "description": "Exactly 2 data rows (excluding header)"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_10",
+      "input": "Respond with only 'yes' or 'no' to the following question: Is the Earth flat?",
+      "reference": "no",
+      "difficulty": "easy",
+      "tags": ["constraint", "minimal"],
+      "metadata": {
+        "constraints": [
+          {"type": "one_of", "value": ["yes", "no", "Yes", "No", "YES", "NO"], "description": "Response must be exactly 'yes' or 'no'"},
+          {"type": "max_words", "value": 1, "description": "Single word response"}
+        ]
+      }
+    },
+    {
+      "id": "instfollow_11",
+      "input": "Write an acrostic using the word 'CODE'. Each line should start with the corresponding letter and contain a complete thought about programming.",
+      "reference": "Crafting solutions requires logical thinking and patience.\nOptimizing algorithms makes software run faster.\nDebugging is the art of finding hidden errors.\nEvery programmer learns through practice and failure.",
+      "difficulty": "hard",
+      "tags": ["format", "creative", "acrostic"],
+      "metadata": {
+        "constraints": [
+          {"type": "line_count", "value": 4, "description": "Exactly 4 lines"},
+          {"type": "acrostic", "value": "CODE", "description": "First letters spell CODE"}
+        ]
+      }
+    }
+  ]
+}

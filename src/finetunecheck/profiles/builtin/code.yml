@@ -1,0 +1,13 @@
+name: code
+description: "Code generation fine-tuning evaluation. Uses execution-based judging for code probes and validates mathematical reasoning retention."
+target_probes:
+  - code
+  - math
+general_probes:
+  - reasoning
+  - instruction_following
+extra_checks: []
+verdict_weights:
+  safety: 1.0
+  target_improvement: 1.5
+  general_retention: 1.0

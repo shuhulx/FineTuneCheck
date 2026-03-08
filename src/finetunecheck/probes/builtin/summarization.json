@@ -1,0 +1,79 @@
+{
+  "name": "summarization",
+  "version": "1.0",
+  "category": "summarization",
+  "judge_type": "rouge",
+  "judge_criteria": "Compute ROUGE-L F1 between the model output and the reference summary. Score is the ROUGE-L F1 value (0.0 to 1.0).",
+  "samples": [
+    {
+      "id": "summarize_0",
+      "input": "Summarize the following passage in one sentence:\n\nThe Amazon rainforest produces approximately 20 percent of the world's oxygen and is home to an estimated 10 percent of all species on Earth. Spanning across nine countries in South America, it covers an area of about 5.5 million square kilometers. However, deforestation has accelerated in recent decades, with an area roughly the size of a football field being cleared every minute.",
+      "reference": "The Amazon rainforest is a vast ecosystem spanning nine countries that produces 20% of Earth's oxygen and hosts 10% of all species, but faces severe deforestation threats.",
+      "difficulty": "easy",
+      "tags": ["environment", "single_sentence"]
+    },
+    {
+      "id": "summarize_1",
+      "input": "Summarize the following passage in 2-3 sentences:\n\nRemote work has fundamentally changed how companies operate. Before the pandemic, only about 6% of workers in the United States worked primarily from home. By 2023, that number had risen to over 25%. Companies have had to invest in new collaboration tools, rethink office space, and develop new management strategies. While some firms have mandated a return to office, surveys consistently show that a majority of knowledge workers prefer hybrid or fully remote arrangements. The debate continues over whether remote work increases or decreases productivity, with studies showing mixed results depending on the type of work and individual circumstances.",
+      "reference": "Remote work surged from 6% to over 25% of US workers following the pandemic, forcing companies to adapt their tools and management approaches. Most knowledge workers prefer hybrid or remote setups, though companies remain divided on return-to-office mandates and the productivity impact remains debated.",
+      "difficulty": "medium",
+      "tags": ["business", "multi_sentence"]
+    },
+    {
+      "id": "summarize_2",
+      "input": "Summarize the key findings:\n\nA 2023 study published in Nature examined the effects of intermittent fasting on metabolic health. The researchers followed 200 participants over 12 months, dividing them into two groups: one practicing 16:8 intermittent fasting and a control group eating normally. The fasting group showed a 7% reduction in body weight, a 12% improvement in insulin sensitivity, and a 15% decrease in inflammatory markers. However, the fasting group also reported higher rates of irritability and difficulty concentrating during fasting periods. The researchers concluded that while intermittent fasting offers metabolic benefits, adherence remains a significant challenge.",
+      "reference": "A 12-month study of 200 participants found that 16:8 intermittent fasting led to 7% weight loss, improved insulin sensitivity, and reduced inflammation, but participants reported mood and concentration issues, and long-term adherence was challenging.",
+      "difficulty": "medium",
+      "tags": ["science", "research"]
+    },
+    {
+      "id": "summarize_3",
+      "input": "Provide a brief summary:\n\nThe European Union's General Data Protection Regulation, or GDPR, went into effect in May 2018 and has since become the gold standard for data privacy laws worldwide. It grants EU citizens several key rights, including the right to access their personal data, the right to have their data deleted, and the right to data portability. Companies that violate GDPR can face fines of up to 4% of their annual global revenue or 20 million euros, whichever is higher. Since its implementation, over 1,600 fines have been issued, totaling more than 4 billion euros.",
+      "reference": "The GDPR, effective since May 2018, is the global benchmark for data privacy, granting EU citizens rights over their personal data and imposing fines up to 4% of global revenue, with over 4 billion euros in penalties issued so far.",
+      "difficulty": "medium",
+      "tags": ["law", "technology"]
+    },
+    {
+      "id": "summarize_4",
+      "input": "Summarize the following in one sentence:\n\nCRISPR-Cas9 gene editing technology has revolutionized molecular biology since its discovery. Scientists can now precisely cut and modify DNA sequences, enabling potential treatments for genetic diseases like sickle cell anemia and cystic fibrosis. Clinical trials are underway for several CRISPR-based therapies. Despite its promise, concerns remain about off-target effects, where unintended DNA modifications could cause harmful mutations.",
+      "reference": "CRISPR-Cas9 allows precise DNA editing with promising therapeutic applications for genetic diseases, though concerns about unintended off-target mutations persist.",
+      "difficulty": "easy",
+      "tags": ["science", "biotechnology"]
+    },
+    {
+      "id": "summarize_5",
+      "input": "Summarize this passage:\n\nElectric vehicles accounted for 14% of all new car sales globally in 2023, up from just 2% in 2019. China leads the market with over 60% of global EV sales, followed by Europe at 25% and the United States at 10%. Battery costs have fallen 90% over the past decade, making EVs increasingly price-competitive with traditional vehicles. However, challenges remain including limited charging infrastructure in rural areas, battery recycling concerns, and the environmental impact of lithium mining.",
+      "reference": "Global EV sales reached 14% of new cars in 2023, led by China, with declining battery costs improving affordability, though challenges in charging infrastructure, battery recycling, and lithium mining impacts remain.",
+      "difficulty": "medium",
+      "tags": ["technology", "automotive"]
+    },
+    {
+      "id": "summarize_6",
+      "input": "Provide a concise summary:\n\nThe James Webb Space Telescope, launched in December 2021, has delivered groundbreaking observations that are reshaping our understanding of the universe. Its infrared capabilities allow it to peer through cosmic dust clouds to observe the formation of stars and planets. In its first year, JWST captured images of galaxies formed just 300 million years after the Big Bang, far earlier than previously thought possible. It also detected carbon dioxide in the atmosphere of an exoplanet for the first time, advancing the search for potentially habitable worlds.",
+      "reference": "The James Webb Space Telescope has made transformative discoveries since 2021, including observing galaxies from 300 million years after the Big Bang and detecting carbon dioxide on an exoplanet, thanks to its powerful infrared imaging capabilities.",
+      "difficulty": "medium",
+      "tags": ["science", "space"]
+    },
+    {
+      "id": "summarize_7",
+      "input": "Summarize the main points:\n\nSleep deprivation affects nearly one-third of adults worldwide and has been linked to numerous health problems. Chronic lack of sleep increases the risk of cardiovascular disease by 48%, type 2 diabetes by 37%, and depression by 300%. Beyond physical health, sleep deprivation impairs cognitive function, reducing reaction times by up to 50% and impairing memory consolidation. The economic cost is substantial too, with sleep-deprived workers costing the US economy an estimated $411 billion annually in lost productivity.",
+      "reference": "Sleep deprivation affects a third of adults globally, significantly increasing risks of heart disease, diabetes, and depression while impairing cognitive function and costing the US economy over $400 billion yearly in lost productivity.",
+      "difficulty": "medium",
+      "tags": ["health", "statistics"]
+    },
+    {
+      "id": "summarize_8",
+      "input": "Summarize in one sentence:\n\nArtificial intelligence models are being increasingly used in drug discovery, reducing the time and cost of identifying promising drug candidates. Traditional drug development takes an average of 12 years and costs $2.6 billion per approved drug. AI-driven approaches have shown the ability to cut early-stage discovery time by up to 75% by rapidly screening millions of molecular compounds.",
+      "reference": "AI is accelerating drug discovery by screening millions of compounds rapidly, potentially cutting early-stage discovery time by 75% compared to the traditional 12-year, $2.6 billion process.",
+      "difficulty": "easy",
+      "tags": ["technology", "healthcare"]
+    },
+    {
+      "id": "summarize_9",
+      "input": "Provide a brief summary of this passage:\n\nMicroplastics have been found in virtually every environment on Earth, from the deepest ocean trenches to Arctic ice. These tiny plastic fragments, smaller than 5 millimeters, enter the environment through the breakdown of larger plastic waste, synthetic clothing fibers, and industrial processes. Recent studies have detected microplastics in human blood, lungs, and placenta. While the long-term health effects are still being studied, early research suggests they may cause inflammation, cellular damage, and disrupt hormonal function.",
+      "reference": "Microplastics are pervasive across all environments and have been found in human tissues including blood and lungs, with early research suggesting potential health risks including inflammation and hormonal disruption.",
+      "difficulty": "medium",
+      "tags": ["environment", "health"]
+    }
+  ]
+}
