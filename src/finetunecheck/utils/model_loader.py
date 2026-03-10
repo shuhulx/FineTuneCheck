@@ -178,9 +178,7 @@ class ModelLoader:
                 with open(adapter_config_path) as f:
                     adapter_cfg = json.load(f)
             except json.JSONDecodeError as exc:
-                raise ValueError(
-                    f"Invalid JSON in {adapter_config_path}: {exc}"
-                ) from exc
+                raise ValueError(f"Invalid JSON in {adapter_config_path}: {exc}") from exc
             if not isinstance(adapter_cfg, dict):
                 raise ValueError(
                     f"Expected a JSON object in {adapter_config_path}, "
