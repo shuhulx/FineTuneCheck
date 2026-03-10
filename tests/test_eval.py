@@ -48,10 +48,10 @@ class TestExactMatchJudge:
         assert verdict.score == 1.0
 
     def test_exact_match_judge_contains(self):
-        """ExactMatchJudge should score 1.0 if reference is contained in output."""
+        """ExactMatchJudge should score 0.0 if reference is only a substring (strict exact match)."""
         sample = ProbeSample(id="s1", input="What is 2+2?", reference="4")
         verdict = self.judge.evaluate(sample, "The answer is 4.")
-        assert verdict.score == 1.0
+        assert verdict.score == 0.0
 
     def test_exact_match_judge_no_reference(self):
         """ExactMatchJudge should score 0.0 when no reference exists."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 
 from finetunecheck.models import CategoryScore
 
@@ -41,7 +42,8 @@ def backward_transfer(
         if cat in target_set:
             continue
         if cat not in ft_scores:
-            diffs.append(-base_scores[cat].mean_score)
+            # Category completely missing in ft → treat as 100% loss (consistent with CRR using 0.0)
+            diffs.append(-1.0)
         else:
             diffs.append(ft_scores[cat].mean_score - base_scores[cat].mean_score)
 
@@ -78,7 +80,9 @@ def capability_retention_rate(
             continue
         ft = ft_scores[cat]
         if base.mean_score == 0.0:
-            crr[cat] = 1.0  # Base was 0, no meaningful retention ratio
+            # Base was 0 → nothing to retain. Return 1.0 whether ft improved or not,
+            # because CRR measures retention of existing capability, not gain.
+            crr[cat] = 1.0
         else:
             crr[cat] = ft.mean_score / base.mean_score
     return crr
@@ -115,6 +119,12 @@ def selective_forgetting_index(
     else:
         crr = crr_or_base  # type: ignore[assignment]
 
+    inf_count = sum(1 for v in crr.values() if v == float("inf"))
+    if inf_count > 0:
+        warnings.warn(
+            f"SFI: filtered {inf_count} infinity CRR value(s) from standard deviation calculation",
+            stacklevel=2,
+        )
     values = [v for v in crr.values() if v != float("inf")]
     if len(values) < 2:
         return 0.0
@@ -154,7 +164,8 @@ def safety_alignment_retention(
         if isinstance(ft_safety_or_scores, dict):
             ft_safety = ft_safety_or_scores.get("safety")
         else:
-            ft_safety = ft_safety_or_scores  # type: ignore[assignment]
+            # base is a dict but ft is not — ft is not a valid CategoryScore in this mode
+            ft_safety = None
     else:
         base_safety = base_safety_or_scores
         ft_safety = ft_safety_or_scores  # type: ignore[assignment]
@@ -205,13 +216,19 @@ def compute_roi_score(
         "bwt": 10.0,
     }
     if weights:
+        for k, v in weights.items():
+            if v < 0.0:
+                raise ValueError(f"Weight '{k}' must be non-negative, got {v}")
         w.update(weights)
+        if all(v == 0.0 for v in w.values()):
+            raise ValueError("At least one weight must be > 0")
 
     target_score = max(0.0, min(1.0, target_improvement))
     retention_score = max(0.0, min(1.0, mean_crr))
     safety_score = max(0.0, min(1.0, sar)) if sar is not None else 1.0
     selectivity_score = max(0.0, 1.0 - sfi)
-    bwt_score = max(0.0, min(1.0, 1.0 + bwt))
+    bwt_clamped = max(-1.0, bwt)
+    bwt_score = max(0.0, min(1.0, 1.0 + bwt_clamped))
 
     total_weight = sum(w.values())
     if total_weight == 0.0:

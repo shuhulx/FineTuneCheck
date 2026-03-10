@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import string
@@ -10,6 +11,8 @@ import subprocess
 import tempfile
 from abc import ABC, abstractmethod
 from collections import Counter
+
+logger = logging.getLogger(__name__)
 
 from finetunecheck.models import JudgeType, JudgeVerdict, ProbeSample
 
@@ -34,7 +37,7 @@ class ExactMatchJudge(Judge):
             )
         norm_out = self._normalize(output)
         norm_ref = self._normalize(sample.reference)
-        match = norm_out == norm_ref or norm_ref in norm_out
+        match = norm_out == norm_ref
         return JudgeVerdict(
             sample_id=sample.id,
             score=1.0 if match else 0.0,
@@ -43,7 +46,9 @@ class ExactMatchJudge(Judge):
         )
 
     def evaluate_batch(self, samples: list[ProbeSample], outputs: list[str]) -> list[JudgeVerdict]:
-        return [self.evaluate(s, o) for s, o in zip(samples, outputs, strict=False)]
+        if len(samples) != len(outputs):
+            raise ValueError(f"Sample count ({len(samples)}) != output count ({len(outputs)})")
+        return [self.evaluate(s, o) for s, o in zip(samples, outputs)]
 
     @staticmethod
     def _normalize(text: str) -> str:
@@ -91,7 +96,9 @@ class F1Judge(Judge):
         )
 
     def evaluate_batch(self, samples: list[ProbeSample], outputs: list[str]) -> list[JudgeVerdict]:
-        return [self.evaluate(s, o) for s, o in zip(samples, outputs, strict=False)]
+        if len(samples) != len(outputs):
+            raise ValueError(f"Sample count ({len(samples)}) != output count ({len(outputs)})")
+        return [self.evaluate(s, o) for s, o in zip(samples, outputs)]
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
@@ -123,7 +130,9 @@ class RougeJudge(Judge):
         )
 
     def evaluate_batch(self, samples: list[ProbeSample], outputs: list[str]) -> list[JudgeVerdict]:
-        return [self.evaluate(s, o) for s, o in zip(samples, outputs, strict=False)]
+        if len(samples) != len(outputs):
+            raise ValueError(f"Sample count ({len(samples)}) != output count ({len(outputs)})")
+        return [self.evaluate(s, o) for s, o in zip(samples, outputs)]
 
 
 class RuleBasedJudge(Judge):
@@ -155,7 +164,9 @@ class RuleBasedJudge(Judge):
         return self._evaluate_instruction_following(sample, output)
 
     def evaluate_batch(self, samples: list[ProbeSample], outputs: list[str]) -> list[JudgeVerdict]:
-        return [self.evaluate(s, o) for s, o in zip(samples, outputs, strict=False)]
+        if len(samples) != len(outputs):
+            raise ValueError(f"Sample count ({len(samples)}) != output count ({len(outputs)})")
+        return [self.evaluate(s, o) for s, o in zip(samples, outputs)]
 
     def _evaluate_safety(self, sample: ProbeSample, output: str) -> JudgeVerdict:
         should_refuse = sample.metadata.get("should_refuse", True)
@@ -285,7 +296,9 @@ Output ONLY a JSON object with two fields:
         )
 
     def evaluate_batch(self, samples: list[ProbeSample], outputs: list[str]) -> list[JudgeVerdict]:
-        return [self.evaluate(s, o) for s, o in zip(samples, outputs, strict=False)]
+        if len(samples) != len(outputs):
+            raise ValueError(f"Sample count ({len(samples)}) != output count ({len(outputs)})")
+        return [self.evaluate(s, o) for s, o in zip(samples, outputs)]
 
     def _generate(self, prompt: str) -> str:
         if self._api_client is not None:
@@ -331,6 +344,7 @@ Output ONLY a JSON object with two fields:
         if num_match:
             score = max(0.0, min(1.0, float(num_match.group(1)) / 10.0))
             return score, raw[:200]
+        logger.warning(f"Failed to parse LLM judge output: {raw[:200]}")
         return 0.5, f"Could not parse judge output: {raw[:200]}"
 
 
@@ -382,7 +396,9 @@ class ExecutionJudge(Judge):
         )
 
     def evaluate_batch(self, samples: list[ProbeSample], outputs: list[str]) -> list[JudgeVerdict]:
-        return [self.evaluate(s, o) for s, o in zip(samples, outputs, strict=False)]
+        if len(samples) != len(outputs):
+            raise ValueError(f"Sample count ({len(samples)}) != output count ({len(outputs)})")
+        return [self.evaluate(s, o) for s, o in zip(samples, outputs)]
 
     @staticmethod
     def _extract_code(text: str) -> str:
@@ -411,23 +427,26 @@ class ExecutionJudge(Judge):
         code = sandbox_prefix + code
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(code)
-            f.flush()
+            f_name = f.name
+        try:
+            result = subprocess.run(
+                ["python", f_name],
+                capture_output=True,
+                text=True,
+                timeout=self._timeout,
+            )
+            if result.returncode != 0:
+                return "", result.stderr
+            return result.stdout, ""
+        except subprocess.TimeoutExpired:
+            return "", f"Execution timed out after {self._timeout}s"
+        except Exception as e:
+            return "", str(e)
+        finally:
             try:
-                result = subprocess.run(
-                    ["python", f.name],
-                    capture_output=True,
-                    text=True,
-                    timeout=self._timeout,
-                )
-                if result.returncode != 0:
-                    return "", result.stderr
-                return result.stdout, ""
-            except subprocess.TimeoutExpired:
-                return "", f"Execution timed out after {self._timeout}s"
-            except Exception as e:
-                return "", str(e)
-            finally:
-                os.unlink(f.name)
+                os.unlink(f_name)
+            except OSError:
+                pass
 
 
 def create_judge(judge_type: JudgeType, **kwargs) -> Judge:

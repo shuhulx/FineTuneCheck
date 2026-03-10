@@ -51,12 +51,12 @@ class TestBackwardTransfer:
         assert abs(bwt) < 1e-9
 
     def test_backward_transfer_missing_ft_category(self):
-        """When ft is missing a category, BWT should treat it as total loss."""
+        """When ft is missing a category, BWT should treat it as -1.0 (total loss)."""
         base = _make_scores({"code": 0.8, "math": 0.7})
         ft = _make_scores({"code": 0.8})  # math missing
         bwt = backward_transfer(base, ft)
-        # code delta = 0, math delta = -0.7
-        assert abs(bwt - (-0.35)) < 1e-9
+        # code delta = 0, math delta = -1.0 (normalized total loss)
+        assert abs(bwt - (-0.5)) < 1e-9
 
     def test_backward_transfer_empty(self):
         """BWT of empty scores should be 0."""

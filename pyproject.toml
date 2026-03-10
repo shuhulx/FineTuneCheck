@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finetunecheck"
-version = "0.1.5"
+version = "0.1.6"
 description = "Automated base vs fine-tuned LLM comparison with forgetting detection, capability retention scoring, and visual diff reports."
 readme = "README.md"
 license = "Apache-2.0"
@@ -24,10 +24,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "torch>=2.0",
-    "transformers>=4.40",
+    "torch>=2.0,<3.0",
+    "transformers>=4.40,<5.0",
     "peft>=0.10",
-    "pydantic>=2.0",
+    "pydantic>=2.0,<3.0",
     "typer[all]>=0.12",
     "rich>=13.0",
     "plotly>=5.18",

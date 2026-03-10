@@ -174,8 +174,18 @@ class ModelLoader:
         if os.path.isfile(adapter_config_path):
             import json
 
-            with open(adapter_config_path) as f:
-                adapter_cfg = json.load(f)
+            try:
+                with open(adapter_config_path) as f:
+                    adapter_cfg = json.load(f)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Invalid JSON in {adapter_config_path}: {exc}"
+                ) from exc
+            if not isinstance(adapter_cfg, dict):
+                raise ValueError(
+                    f"Expected a JSON object in {adapter_config_path}, "
+                    f"got {type(adapter_cfg).__name__}"
+                )
             base_model = adapter_cfg.get("base_model_name_or_path", None)
             return ModelSpec(path=path, model_type=ModelType.LORA, base_model=base_model)
 

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 
 from rich.console import Console
+
+logger = logging.getLogger(__name__)
 
 from finetunecheck.baselines.manager import BaselineManager
 from finetunecheck.config import EvalConfig
@@ -120,7 +123,14 @@ class EvalRunner:
         console.print("[dim]Loading models...[/dim]")
         try:
             self._base_backend = create_backend(base_spec, self.config.device)
-            self._ft_backend = create_backend(ft_spec, self.config.device)
+            try:
+                self._ft_backend = create_backend(ft_spec, self.config.device)
+            except Exception:
+                if self._base_backend is not None:
+                    with contextlib.suppress(Exception):
+                        self._base_backend.cleanup()
+                    self._base_backend = None
+                raise
         except Exception as e:
             console.print(f"[red]Error loading models: {e}[/red]")
             raise
@@ -191,8 +201,18 @@ class EvalRunner:
         """Build probe sets for all configured categories."""
         probes = []
         for category in self.config.general_probes:
+            logger.warning(
+                "Using placeholder probes for category '%s' — "
+                "replace with curated probe sets for production use",
+                category,
+            )
             probes.append(_make_placeholder_probes(category, self.config.num_samples))
         if self.config.target_task and self.config.target_task not in self.config.general_probes:
+            logger.warning(
+                "Using placeholder probes for target task '%s' — "
+                "replace with curated probe sets for production use",
+                self.config.target_task,
+            )
             probes.append(
                 _make_placeholder_probes(self.config.target_task, self.config.num_samples)
             )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from finetunecheck.utils.device import detect_device
@@ -255,9 +256,11 @@ async def handle_generate_report(arguments: dict[str, Any]) -> str:
 
     output_path = arguments["output_path"]
 
-    resolved = os.path.realpath(output_path)
-    cwd = os.path.realpath(os.getcwd())
-    if not resolved.startswith(cwd + os.sep) and resolved != cwd:
+    resolved = Path(output_path).resolve()
+    cwd = Path.cwd().resolve()
+    try:
+        resolved.relative_to(cwd)
+    except ValueError:
         return "Error: output_path must be within the working directory."
 
     fmt = arguments.get("format", "html")

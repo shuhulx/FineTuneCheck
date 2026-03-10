@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import traceback
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
@@ -18,6 +21,8 @@ from finetunecheck.mcp.schemas import (
     SUGGEST_FIXES_SCHEMA,
 )
 from finetunecheck.mcp.tools import TOOL_HANDLERS
+
+logger = logging.getLogger(__name__)
 
 server = Server("finetunecheck")
 
@@ -110,6 +115,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         result = await handler(arguments)
         return [TextContent(type="text", text=result)]
     except Exception as exc:
+        logger.error("Error running %s: %s\n%s", name, exc, traceback.format_exc())
         return [TextContent(type="text", text=f"Error running {name}: {exc}")]
 
 

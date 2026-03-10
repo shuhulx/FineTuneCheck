@@ -131,6 +131,10 @@ def run(
     cache: bool = typer.Option(True, "--cache/--no-cache", help="Cache baseline results"),
 ) -> None:
     """Run comprehensive fine-tuning evaluation."""
+    if num_samples <= 0:
+        console.print("[red]Error: --num-samples must be greater than 0.[/red]")
+        raise typer.Exit(1)
+
     from finetunecheck.config import EvalConfig
     from finetunecheck.eval.runner import EvalRunner
     from finetunecheck.models import Verdict
@@ -202,6 +206,10 @@ def compare(
     num_samples: int = typer.Option(100, "--num-samples", "-n", help="Samples per probe"),
 ) -> None:
     """Compare multiple fine-tuning runs against the same base model."""
+    if num_samples <= 0:
+        console.print("[red]Error: --num-samples must be greater than 0.[/red]")
+        raise typer.Exit(1)
+
     from finetunecheck.compare.multi_run import MultiRunComparator
     from finetunecheck.config import EvalConfig
 
