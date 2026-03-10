@@ -7,8 +7,6 @@ import logging
 
 from rich.console import Console
 
-logger = logging.getLogger(__name__)
-
 from finetunecheck.baselines.manager import BaselineManager
 from finetunecheck.config import EvalConfig
 from finetunecheck.eval.cache import BaselineCache
@@ -42,6 +40,7 @@ from finetunecheck.utils.formatting import (
 )
 from finetunecheck.utils.model_loader import ModelLoader
 
+logger = logging.getLogger(__name__)
 console = Console()
 
 # Default judge type per probe category

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -12,9 +13,9 @@ import tempfile
 from abc import ABC, abstractmethod
 from collections import Counter
 
-logger = logging.getLogger(__name__)
-
 from finetunecheck.models import JudgeType, JudgeVerdict, ProbeSample
+
+logger = logging.getLogger(__name__)
 
 
 class Judge(ABC):
@@ -443,10 +444,8 @@ class ExecutionJudge(Judge):
         except Exception as e:
             return "", str(e)
         finally:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(f_name)
-            except OSError:
-                pass
 
 
 def create_judge(judge_type: JudgeType, **kwargs) -> Judge:
