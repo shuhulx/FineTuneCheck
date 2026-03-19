@@ -26,7 +26,7 @@ class ForgettingAnalyzer:
         base_results: dict[str, list[JudgeVerdict]],
         ft_results: dict[str, list[JudgeVerdict]],
         probes: dict[str, ProbeSet],
-        threshold: float = 0.3,
+        threshold: float = 0.1,
     ) -> list[SampleRegression]:
         """Find specific samples that regressed significantly.
 

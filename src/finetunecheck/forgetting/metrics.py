@@ -129,7 +129,7 @@ def selective_forgetting_index(
     if len(values) < 2:
         return 0.0
     mean_val = sum(values) / len(values)
-    variance = sum((v - mean_val) ** 2 for v in values) / len(values)
+    variance = sum((v - mean_val) ** 2 for v in values) / (len(values) - 1)
     return math.sqrt(variance)
 
 
