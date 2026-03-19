@@ -152,6 +152,11 @@ def run(
         output_format=output_format,
     )
 
+    if profile:
+        from finetunecheck.profiles.loader import ProfileLoader
+
+        config = ProfileLoader.apply_to_config(profile, config)
+
     with console.status("[bold cyan]Running evaluation...[/bold cyan]", spinner="dots"):
         runner = EvalRunner(config)
         results = runner.run()

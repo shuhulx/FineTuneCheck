@@ -9,6 +9,7 @@ import os
 import re
 import string
 import subprocess
+import sys
 import tempfile
 from abc import ABC, abstractmethod
 from collections import Counter
@@ -431,7 +432,7 @@ class ExecutionJudge(Judge):
             f_name = f.name
         try:
             result = subprocess.run(
-                ["python", f_name],
+                [sys.executable, f_name],
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,

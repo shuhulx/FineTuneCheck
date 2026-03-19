@@ -31,13 +31,7 @@ from finetunecheck.models import (
     SampleRegression,
     Verdict,
 )
-from finetunecheck.utils.formatting import (
-    print_category_scores,
-    print_concerns,
-    print_progress,
-    print_recommendations,
-    print_verdict,
-)
+from finetunecheck.utils.formatting import print_progress
 from finetunecheck.utils.model_loader import ModelLoader
 
 logger = logging.getLogger(__name__)
@@ -185,36 +179,34 @@ class EvalRunner:
                 recommendations=recommendations,
             )
 
-            console.print()
-            print_category_scores(base_scores, ft_scores)
-            print_verdict(verdict, roi, summary)
-            print_concerns(concerns)
-            print_recommendations(recommendations)
-
             return results
 
         finally:
             self._cleanup()
 
     def _build_probes(self) -> list[ProbeSet]:
-        """Build probe sets for all configured categories."""
+        """Build probe sets for all configured categories.
+
+        Loads from the built-in JSON files via ProbeRegistry first; falls back
+        to placeholder probes only when a JSON file is missing for that category.
+        """
+        from finetunecheck.probes.registry import ProbeRegistry
+
+        categories = list(self.config.general_probes)
+        if self.config.target_task and self.config.target_task not in categories:
+            categories.append(self.config.target_task)
+
         probes = []
-        for category in self.config.general_probes:
-            logger.warning(
-                "Using placeholder probes for category '%s' — "
-                "replace with curated probe sets for production use",
-                category,
-            )
-            probes.append(_make_placeholder_probes(category, self.config.num_samples))
-        if self.config.target_task and self.config.target_task not in self.config.general_probes:
-            logger.warning(
-                "Using placeholder probes for target task '%s' — "
-                "replace with curated probe sets for production use",
-                self.config.target_task,
-            )
-            probes.append(
-                _make_placeholder_probes(self.config.target_task, self.config.num_samples)
-            )
+        for category in categories:
+            try:
+                probes.append(ProbeRegistry.get(category))
+            except KeyError:
+                logger.warning(
+                    "No built-in probe JSON found for category '%s' — "
+                    "using placeholder probes. Add a JSON file to probes/builtin/ for production use.",
+                    category,
+                )
+                probes.append(_make_placeholder_probes(category, self.config.num_samples))
         return probes
 
     def _evaluate_model(

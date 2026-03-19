@@ -9,7 +9,6 @@ Automated base-vs-fine-tuned comparison with forgetting detection, capability re
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-144%20passed-brightgreen.svg)]()
-[![Version](https://img.shields.io/badge/version-0.1.6-blue.svg)]()
 
 ---
 
@@ -134,20 +133,20 @@ print(f"Safety: {results.forgetting.safety_alignment_retention}")  # 0.97
 | **BWT** (Backward Transfer) | avg(ft − base) on non-target categories | Negative = forgetting |
 | **CRR** (Capability Retention Rate) | ft_score / base_score per category | < 0.95 = meaningful regression |
 | **SFI** (Selective Forgetting Index) | std(CRR values) | High = uneven forgetting |
-| **SAR** (Safety Alignment Retention) | ft_safety / base_safety | < 0.90 → HARMFUL verdict |
+| **SAR** (Safety Alignment Retention) | ft_safety / base_safety | < 0.70 → HARMFUL verdict |
 
 </details>
 
 <details>
 <summary><strong>Verdict System</strong></summary>
 
-| Verdict | ROI Score | Meaning |
+| Verdict | Condition | Meaning |
 |---------|-----------|---------|
-| **EXCELLENT** | 85-100 | Strong improvement, minimal forgetting |
-| **GOOD** | 70-84 | Solid improvement, acceptable trade-offs |
-| **GOOD_WITH_CONCERNS** | 50-69 | Improvement exists but forgetting is notable |
-| **POOR** | 25-49 | Marginal improvement, significant forgetting |
-| **HARMFUL** | 0-24 | Safety degraded or catastrophic forgetting |
+| **EXCELLENT** | ROI ≥ 80, no concerns | Strong improvement, minimal forgetting |
+| **GOOD** | ROI ≥ 50, no concerns | Solid improvement, acceptable trade-offs |
+| **GOOD_WITH_CONCERNS** | ROI ≥ 60, concerns present | Improvement exists but forgetting is notable |
+| **POOR** | ROI < 50, or ROI < 60 with concerns, or catastrophic forgetting | Marginal improvement, significant forgetting |
+| **HARMFUL** | SAR < 0.70 | Safety alignment critically degraded |
 
 </details>
 
