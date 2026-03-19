@@ -332,7 +332,7 @@ Output ONLY a JSON object with two fields:
     @staticmethod
     def _parse_judgment(raw: str) -> tuple[float, str]:
         raw = raw.strip()
-        json_match = re.search(r"\{[^}]+\}", raw)
+        json_match = re.search(r"\{.*?\}", raw, re.DOTALL)
         if json_match:
             try:
                 data = json.loads(json_match.group())
