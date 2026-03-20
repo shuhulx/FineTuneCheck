@@ -269,48 +269,6 @@ pytest
 - Kornblith et al., "Similarity of Neural Network Representations Revisited" (ICML 2019) — CKA
 - Guo et al., "On Calibration of Modern Neural Networks" (2017) — ECE
 
-## Changelog
-
-### 0.2.1
-- **Docs:** Added HTML Report Contents section — full list of always-included and `--deep` charts
-- **Docs:** Filled changelog for 0.1.7 through 0.2.0
-
-### 0.2.0
-- **Added:** ROI Score Breakdown chart — stacked horizontal bar with 5 weighted components (Target, Retention, Safety, Selectivity, BWT) showing how the composite score was built
-- **Added:** Error bars on Category Scores bar chart using `std_score` — shows score variance across probe samples for both base and fine-tuned
-- **Added:** Inline annotation on Perplexity Distribution chart — Wasserstein distance and tail fraction (% samples where FT perplexity > 2× base) shown directly in chart
-- **Added:** HTML Report Contents section in README
-
-### 0.1.9
-- **Fixed:** SFI (Selective Forgetting Index) now uses sample variance with Bessel's correction (`/ n-1`) instead of population variance
-- **Fixed:** `find_regressions` default threshold corrected from 0.3 → 0.1 to match EvalRunner
-
-### 0.1.8
-- **Fixed:** LLMJudge `_parse_judgment` regex now handles nested braces with `re.DOTALL` — previously failed on multi-line JSON responses
-
-### 0.1.7
-- **Fixed:** BWT metric now uses normalized -1.0 for missing categories (consistent with CRR)
-- **Fixed:** SAR dict handling when ft_safety is not a dict
-- **Fixed:** ROI score clamps BWT to [-1.0, inf) before normalization
-
-### 0.1.6
-
-- **Fixed:** BWT metric now uses normalized -1.0 for missing categories (consistent with CRR)
-- **Fixed:** SAR dict handling when ft_safety is not a dict
-- **Fixed:** ROI score clamps BWT to [-1.0, inf) before normalization
-- **Fixed:** ExactMatchJudge no longer allows substring matches
-- **Fixed:** All judge batch methods validate input lengths
-- **Fixed:** LLM judge parse failures now logged instead of silently returning 0.5
-- **Fixed:** ExecutionJudge temp file cleanup in proper try/finally
-- **Fixed:** Path traversal hardening in MCP report generation
-- **Fixed:** MCP server logs full tracebacks on errors
-- **Fixed:** CLI validates num_samples > 0
-- **Fixed:** adapter_config.json parsing validates JSON structure
-- **Fixed:** Backend cleanup on partial model load failure
-- **Added:** Warnings for SFI infinity filtering and placeholder probe fallback
-- **Added:** ROI weight validation (non-negative, at least one > 0)
-- **Added:** Dependency upper bounds (torch<3, transformers<5, pydantic<3)
-
 ## License
 
 Apache 2.0
