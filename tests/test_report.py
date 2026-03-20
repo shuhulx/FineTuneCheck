@@ -4,7 +4,9 @@ import json
 import re
 from pathlib import Path
 
-from finetunecheck.models import EvalResults, ForgettingReport, ForgettingPattern, Verdict
+import pytest
+
+from finetunecheck.models import EvalResults, ForgettingPattern, ForgettingReport, Verdict
 from finetunecheck.report.generator import ReportGenerator
 
 
@@ -367,8 +369,6 @@ class TestBuildPPLFigureAnnotation:
 # ---------------------------------------------------------------------------
 # Full HTML report — new feature presence
 # ---------------------------------------------------------------------------
-
-import pytest
 
 
 class TestHTMLReportNewFeatures:
