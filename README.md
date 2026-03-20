@@ -150,6 +150,25 @@ print(f"Safety: {results.forgetting.safety_alignment_retention}")  # 0.97
 
 </details>
 
+## HTML Report Contents
+
+Generate with `--report report.html` (or `-f html`). Single self-contained file, no server required.
+
+**Always included:**
+- **Verdict banner** — verdict label + ROI score
+- **Category Scores: Base vs Fine-tuned** — grouped bar chart with error bars (±1 std), radar chart, and per-category table
+- **ROI Score Breakdown** — stacked bar showing the 5 weighted components: Target (30pt), Retention (25pt), Safety (25pt), Selectivity (10pt), BWT (10pt)
+- **Forgetting Analysis** — capability retention rate per category, most affected / resilient lists
+- **Worst Sample-Level Regressions** — top 15 samples where fine-tuning hurt the most
+- **Concerns & Recommendations** — actionable items from the verdict engine
+
+**With `--deep`:**
+- **CKA Similarity** — per-layer alignment bar chart, most diverged layers highlighted
+- **Perplexity Distribution** — overlapping histograms (base vs fine-tuned) with inline Wasserstein distance and tail fraction annotation
+- **Spectral Analysis** — effective rank per layer with mean reference line
+- **Calibration (Reliability Diagram)** — confidence vs accuracy for base and fine-tuned with ECE values
+- **Activation Drift** — per-layer drift (1 - cosine sim) bar chart
+
 ## Deep Analysis
 
 Enable with `--deep` for additional diagnostics:
@@ -251,6 +270,24 @@ pytest
 - Guo et al., "On Calibration of Modern Neural Networks" (2017) — ECE
 
 ## Changelog
+
+### 0.2.0
+- **Added:** ROI Score Breakdown chart — stacked horizontal bar with 5 weighted components (Target, Retention, Safety, Selectivity, BWT) showing how the composite score was built
+- **Added:** Error bars on Category Scores bar chart using `std_score` — shows score variance across probe samples for both base and fine-tuned
+- **Added:** Inline annotation on Perplexity Distribution chart — Wasserstein distance and tail fraction (% samples where FT perplexity > 2× base) shown directly in chart
+- **Added:** HTML Report Contents section in README
+
+### 0.1.9
+- **Fixed:** SFI (Selective Forgetting Index) now uses sample variance with Bessel's correction (`/ n-1`) instead of population variance
+- **Fixed:** `find_regressions` default threshold corrected from 0.3 → 0.1 to match EvalRunner
+
+### 0.1.8
+- **Fixed:** LLMJudge `_parse_judgment` regex now handles nested braces with `re.DOTALL` — previously failed on multi-line JSON responses
+
+### 0.1.7
+- **Fixed:** BWT metric now uses normalized -1.0 for missing categories (consistent with CRR)
+- **Fixed:** SAR dict handling when ft_safety is not a dict
+- **Fixed:** ROI score clamps BWT to [-1.0, inf) before normalization
 
 ### 0.1.6
 
