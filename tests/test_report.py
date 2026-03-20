@@ -1,9 +1,10 @@
 """Tests for report generation."""
 
 import json
+import re
 from pathlib import Path
 
-from finetunecheck.models import EvalResults, Verdict
+from finetunecheck.models import EvalResults, ForgettingReport, ForgettingPattern, Verdict
 from finetunecheck.report.generator import ReportGenerator
 
 
@@ -178,3 +179,257 @@ class TestReportExport:
         assert "GOOD" in content
         assert "reasoning" in content
         assert "78.0" in content
+
+
+# ---------------------------------------------------------------------------
+# _build_roi_breakdown
+# ---------------------------------------------------------------------------
+
+class TestBuildROIBreakdown:
+    def test_returns_valid_json(self, sample_eval_results):
+        gen = ReportGenerator()
+        result = gen._build_roi_breakdown(sample_eval_results)
+        parsed = json.loads(result)
+        assert "data" in parsed
+
+    def test_returns_empty_dict_when_no_forgetting(self, base_scores, ft_scores_good):
+        results = EvalResults(
+            base_model="base",
+            finetuned_model="ft",
+            base_scores=base_scores,
+            ft_scores=ft_scores_good,
+        )
+        gen = ReportGenerator()
+        result = gen._build_roi_breakdown(results)
+        assert result == "{}"
+
+    def test_has_five_traces(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        assert len(parsed["data"]) == 5
+
+    def test_trace_names_cover_all_components(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        names_concat = " ".join(t["name"] for t in parsed["data"])
+        for component in ("Target", "Retention", "Safety", "Selectivity", "BWT"):
+            assert component in names_concat
+
+    def test_all_scores_non_negative(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        for trace in parsed["data"]:
+            assert trace["x"][0] >= 0.0
+
+    def test_scores_within_max_points(self, sample_eval_results):
+        """Each component score must not exceed its weight cap."""
+        max_points = {"Target": 30, "Retention": 25, "Safety": 25, "Selectivity": 10, "BWT": 10}
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        for trace in parsed["data"]:
+            name = trace["name"].split(" (")[0]  # strip "(score/max)" suffix
+            assert trace["x"][0] <= max_points[name] + 1e-6, f"{name} exceeded cap"
+
+    def test_total_does_not_exceed_100(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        total = sum(t["x"][0] for t in parsed["data"])
+        assert total <= 100.0 + 1e-6
+
+    def test_orientation_is_horizontal(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        for trace in parsed["data"]:
+            assert trace.get("orientation") == "h"
+
+    def test_barmode_is_stack(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        assert parsed["layout"]["barmode"] == "stack"
+
+    def test_title_contains_roi_score(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(sample_eval_results))
+        title_text = parsed["layout"]["title"]["text"]
+        assert "78" in title_text  # roi_score=78.0
+
+    def test_safety_defaults_to_full_when_none(self, base_scores, ft_scores_good):
+        """When safety_alignment_retention is None, Safety component should use 1.0."""
+        results = EvalResults(
+            base_model="base",
+            finetuned_model="ft",
+            base_scores=base_scores,
+            ft_scores=ft_scores_good,
+            target_improvement=0.5,
+            forgetting=ForgettingReport(
+                backward_transfer=0.0,
+                capability_retention_rates={"reasoning": 1.0},
+                selective_forgetting_index=0.0,
+                safety_alignment_retention=None,
+                pattern=ForgettingPattern.MINIMAL,
+                most_affected=[],
+                resilient=[],
+            ),
+        )
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_roi_breakdown(results))
+        safety_trace = next(t for t in parsed["data"] if t["name"].startswith("Safety"))
+        assert safety_trace["x"][0] == pytest.approx(25.0)
+
+
+# ---------------------------------------------------------------------------
+# _build_target_bars — error bars
+# ---------------------------------------------------------------------------
+
+class TestBuildTargetBarsErrorBars:
+    def test_error_bars_present_on_both_traces(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_target_bars(sample_eval_results))
+        assert len(parsed["data"]) >= 2
+        for trace in parsed["data"]:
+            assert "error_y" in trace, f"Trace '{trace.get('name')}' missing error_y"
+
+    def test_error_bars_visible(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_target_bars(sample_eval_results))
+        for trace in parsed["data"]:
+            assert trace["error_y"]["visible"] is True
+
+    def test_error_bar_array_length_matches_categories(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_target_bars(sample_eval_results))
+        num_cats = len(sample_eval_results.base_scores)
+        for trace in parsed["data"]:
+            assert len(trace["error_y"]["array"]) == num_cats
+
+    def test_error_bar_values_are_non_negative(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_target_bars(sample_eval_results))
+        for trace in parsed["data"]:
+            for v in trace["error_y"]["array"]:
+                assert v >= 0.0
+
+    def test_base_error_bars_match_std_scores(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_target_bars(sample_eval_results))
+        base_trace = next(t for t in parsed["data"] if "Base" in t["name"])
+        categories = sorted(sample_eval_results.base_scores.keys())
+        expected = [sample_eval_results.base_scores[c].std_score for c in categories]
+        assert base_trace["error_y"]["array"] == pytest.approx(expected)
+
+    def test_ft_error_bars_match_std_scores(self, sample_eval_results):
+        gen = ReportGenerator()
+        parsed = json.loads(gen._build_target_bars(sample_eval_results))
+        ft_trace = next(t for t in parsed["data"] if "Fine" in t["name"])
+        categories = sorted(sample_eval_results.ft_scores.keys())
+        expected = [sample_eval_results.ft_scores[c].std_score for c in categories]
+        assert ft_trace["error_y"]["array"] == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------------------
+# _build_ppl_figure — Wasserstein annotation
+# ---------------------------------------------------------------------------
+
+class TestBuildPPLFigureAnnotation:
+    def test_annotation_present_in_figure(self, sample_deep_analysis):
+        gen = ReportGenerator()
+        ppl = sample_deep_analysis.perplexity
+        parsed = json.loads(gen._build_ppl_figure(ppl))
+        annotations = parsed.get("layout", {}).get("annotations", [])
+        assert len(annotations) >= 1
+
+    def test_annotation_contains_wasserstein_value(self, sample_deep_analysis):
+        gen = ReportGenerator()
+        ppl = sample_deep_analysis.perplexity
+        parsed = json.loads(gen._build_ppl_figure(ppl))
+        annotations = parsed["layout"]["annotations"]
+        text_concat = " ".join(a["text"] for a in annotations)
+        assert "Wasserstein" in text_concat
+        assert "2.300" in text_concat  # wasserstein_distance=2.3
+
+    def test_annotation_contains_tail_fraction(self, sample_deep_analysis):
+        gen = ReportGenerator()
+        ppl = sample_deep_analysis.perplexity
+        parsed = json.loads(gen._build_ppl_figure(ppl))
+        annotations = parsed["layout"]["annotations"]
+        text_concat = " ".join(a["text"] for a in annotations)
+        assert "Tail" in text_concat or "tail" in text_concat.lower()
+
+    def test_annotation_positioned_top_right(self, sample_deep_analysis):
+        gen = ReportGenerator()
+        ppl = sample_deep_analysis.perplexity
+        parsed = json.loads(gen._build_ppl_figure(ppl))
+        annotation = parsed["layout"]["annotations"][0]
+        assert annotation["xanchor"] == "right"
+        assert annotation["yanchor"] == "top"
+
+
+# ---------------------------------------------------------------------------
+# Full HTML report — new feature presence
+# ---------------------------------------------------------------------------
+
+import pytest
+
+
+class TestHTMLReportNewFeatures:
+    def test_roi_breakdown_section_present(self, sample_eval_results, tmp_path):
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(sample_eval_results, str(output))
+        content = output.read_text()
+        assert "ROI Score Breakdown" in content
+
+    def test_roi_breakdown_chart_div_present(self, sample_eval_results, tmp_path):
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(sample_eval_results, str(output))
+        content = output.read_text()
+        assert "chart-roi-breakdown" in content
+
+    def test_roi_breakdown_absent_when_no_forgetting(self, base_scores, ft_scores_good, tmp_path):
+        results = EvalResults(
+            base_model="base",
+            finetuned_model="ft",
+            base_scores=base_scores,
+            ft_scores=ft_scores_good,
+        )
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(results, str(output))
+        content = output.read_text()
+        assert "ROI Score Breakdown" not in content
+
+    def test_error_y_in_category_chart_json(self, sample_eval_results, tmp_path):
+        """Category scores chart should embed error_y in the HTML."""
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(sample_eval_results, str(output))
+        content = output.read_text()
+        assert "error_y" in content
+
+    def test_wasserstein_in_deep_analysis_report(self, sample_eval_results, sample_deep_analysis, tmp_path):
+        sample_eval_results.deep_analysis = sample_deep_analysis
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(sample_eval_results, str(output))
+        content = output.read_text()
+        assert "Wasserstein" in content
+
+    def test_ppl_annotation_value_in_report(self, sample_eval_results, sample_deep_analysis, tmp_path):
+        sample_eval_results.deep_analysis = sample_deep_analysis
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(sample_eval_results, str(output))
+        content = output.read_text()
+        assert "2.300" in content  # wasserstein_distance=2.3
+
+    def test_roi_breakdown_json_parseable(self, sample_eval_results, tmp_path):
+        """ROI breakdown JSON embedded in the report must be parseable."""
+        output = tmp_path / "report.html"
+        gen = ReportGenerator()
+        gen.generate(sample_eval_results, str(output))
+        content = output.read_text()
+        match = re.search(r"renderChart\('chart-roi-breakdown',\s*(.+?)\);", content)
+        assert match, "chart-roi-breakdown renderChart call not found"
+        parsed = json.loads(match.group(1))
+        assert "data" in parsed
