@@ -61,6 +61,7 @@ class ReportGenerator:
             "radar": self._build_radar_chart(results),
             "retention_bars": self._build_retention_bars(results),
             "target_bars": self._build_target_bars(results),
+            "roi_breakdown": self._build_roi_breakdown(results) if results.forgetting else None,
         }
 
         if results.deep_analysis:
@@ -184,6 +185,8 @@ class ReportGenerator:
 
         base_vals = [results.base_scores[c].mean_score for c in categories]
         ft_vals = [results.ft_scores[c].mean_score for c in categories]
+        base_err = [results.base_scores[c].std_score for c in categories]
+        ft_err = [results.ft_scores[c].std_score for c in categories]
 
         fig = go.Figure()
         fig.add_trace(
@@ -192,6 +195,7 @@ class ReportGenerator:
                 x=categories,
                 y=base_vals,
                 marker=dict(color="#6366F1", cornerradius=4),
+                error_y=dict(type="data", array=base_err, visible=True, color="#6366F1", thickness=1.5, width=4),
             )
         )
         fig.add_trace(
@@ -200,6 +204,7 @@ class ReportGenerator:
                 x=categories,
                 y=ft_vals,
                 marker=dict(color="#10B981", cornerradius=4),
+                error_y=dict(type="data", array=ft_err, visible=True, color="#10B981", thickness=1.5, width=4),
             )
         )
         fig.update_layout(
@@ -290,6 +295,24 @@ class ReportGenerator:
             barmode="overlay",
             legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
             height=360,
+        )
+        fig.add_annotation(
+            x=0.98,
+            y=0.98,
+            xref="paper",
+            yref="paper",
+            text=(
+                f"Wasserstein: {ppl.wasserstein_distance:.3f}<br>"
+                f"Tail fraction (2×): {ppl.tail_fraction:.1%}"
+            ),
+            showarrow=False,
+            font=dict(size=11, color="#475569"),
+            bgcolor="rgba(255,255,255,0.85)",
+            bordercolor="#CBD5E1",
+            borderwidth=1,
+            xanchor="right",
+            yanchor="top",
+            align="right",
         )
         return fig.to_json()
 
@@ -396,6 +419,65 @@ class ReportGenerator:
             xaxis=dict(title="Layer", gridcolor="#F1F5F9", tickangle=-45),
             yaxis=dict(title="Drift (1 - cosine sim)", gridcolor="#F1F5F9"),
             height=360,
+        )
+        return fig.to_json()
+
+    def _build_roi_breakdown(self, results: EvalResults) -> str:
+        """Stacked horizontal bar showing the 5 weighted ROI components."""
+        if not results.forgetting:
+            return "{}"
+
+        f = results.forgetting
+        crr_vals = list(f.capability_retention_rates.values())
+        mean_crr = sum(crr_vals) / len(crr_vals) if crr_vals else 0.0
+
+        components = {
+            "Target": max(0.0, min(1.0, results.target_improvement)) * 30,
+            "Retention": max(0.0, min(1.0, mean_crr)) * 25,
+            "Safety": (
+                max(0.0, min(1.0, f.safety_alignment_retention))
+                if f.safety_alignment_retention is not None
+                else 1.0
+            ) * 25,
+            "Selectivity": max(0.0, 1.0 - f.selective_forgetting_index) * 10,
+            "BWT": max(0.0, min(1.0, 1.0 + max(-1.0, f.backward_transfer))) * 10,
+        }
+        max_points = {"Target": 30, "Retention": 25, "Safety": 25, "Selectivity": 10, "BWT": 10}
+        colors = {
+            "Target": "#10B981",
+            "Retention": "#6366F1",
+            "Safety": "#3B82F6",
+            "Selectivity": "#F59E0B",
+            "BWT": "#EF4444",
+        }
+
+        fig = go.Figure()
+        for name, score in components.items():
+            fig.add_trace(
+                go.Bar(
+                    name=f"{name} ({score:.1f}/{max_points[name]})",
+                    x=[score],
+                    y=["ROI"],
+                    orientation="h",
+                    marker_color=colors[name],
+                    text=f"{name}<br>{score:.1f}",
+                    textposition="inside",
+                    insidetextanchor="middle",
+                    textfont=dict(size=11, color="white"),
+                )
+            )
+
+        fig.update_layout(
+            **_LAYOUT_DEFAULTS,
+            title=dict(
+                text=f"ROI Score Breakdown — Total: {results.roi_score:.0f}/100",
+                font=dict(size=14),
+            ),
+            barmode="stack",
+            xaxis=dict(title="Points", range=[0, 102], gridcolor="#F1F5F9"),
+            yaxis=dict(title=""),
+            height=180,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.55, xanchor="center", x=0.5),
         )
         return fig.to_json()
 

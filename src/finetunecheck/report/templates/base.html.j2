@@ -481,6 +481,18 @@
     </div>
     {% endif %}
 
+    <!-- ====================== ROI BREAKDOWN ====================== -->
+    {% if figures.roi_breakdown %}
+    <div class="section">
+        <div class="section-header">
+            <h2>ROI Score Breakdown</h2>
+        </div>
+        <div class="section-body">
+            <div class="chart-container" id="chart-roi-breakdown"></div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- ====================== DEEP ANALYSIS ====================== -->
     {% if figures.deep_analysis %}
     <div class="section">
@@ -670,6 +682,9 @@
     renderChart('chart-radar', {{ figures.radar | safe }});
     renderChart('chart-retention-bars', {{ figures.retention_bars | safe }});
     renderChart('chart-target-bars', {{ figures.target_bars | safe }});
+    {% if figures.roi_breakdown %}
+    renderChart('chart-roi-breakdown', {{ figures.roi_breakdown | safe }});
+    {% endif %}
 
     // Deep analysis charts
     {% if figures.deep_analysis %}
