@@ -195,7 +195,14 @@ class ReportGenerator:
                 x=categories,
                 y=base_vals,
                 marker=dict(color="#6366F1", cornerradius=4),
-                error_y=dict(type="data", array=base_err, visible=True, color="#6366F1", thickness=1.5, width=4),
+                error_y=dict(
+                    type="data",
+                    array=base_err,
+                    visible=True,
+                    color="#6366F1",
+                    thickness=1.5,
+                    width=4,
+                ),
             )
         )
         fig.add_trace(
@@ -204,7 +211,9 @@ class ReportGenerator:
                 x=categories,
                 y=ft_vals,
                 marker=dict(color="#10B981", cornerradius=4),
-                error_y=dict(type="data", array=ft_err, visible=True, color="#10B981", thickness=1.5, width=4),
+                error_y=dict(
+                    type="data", array=ft_err, visible=True, color="#10B981", thickness=1.5, width=4
+                ),
             )
         )
         fig.update_layout(
@@ -438,7 +447,8 @@ class ReportGenerator:
                 max(0.0, min(1.0, f.safety_alignment_retention))
                 if f.safety_alignment_retention is not None
                 else 1.0
-            ) * 25,
+            )
+            * 25,
             "Selectivity": max(0.0, 1.0 - f.selective_forgetting_index) * 10,
             "BWT": max(0.0, min(1.0, 1.0 + max(-1.0, f.backward_transfer))) * 10,
         }
