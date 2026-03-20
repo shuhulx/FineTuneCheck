@@ -271,6 +271,10 @@ pytest
 
 ## Changelog
 
+### 0.2.1
+- **Docs:** Added HTML Report Contents section — full list of always-included and `--deep` charts
+- **Docs:** Filled changelog for 0.1.7 through 0.2.0
+
 ### 0.2.0
 - **Added:** ROI Score Breakdown chart — stacked horizontal bar with 5 weighted components (Target, Retention, Safety, Selectivity, BWT) showing how the composite score was built
 - **Added:** Error bars on Category Scores bar chart using `std_score` — shows score variance across probe samples for both base and fine-tuned
