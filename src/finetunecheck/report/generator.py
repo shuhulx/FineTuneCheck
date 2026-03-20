@@ -303,7 +303,7 @@ class ReportGenerator:
             yref="paper",
             text=(
                 f"Wasserstein: {ppl.wasserstein_distance:.3f}<br>"
-                f"Tail fraction (2×): {ppl.tail_fraction:.1%}"
+                f"Tail fraction (2x): {ppl.tail_fraction:.1%}"
             ),
             showarrow=False,
             font=dict(size=11, color="#475569"),
