@@ -143,7 +143,6 @@ def run(
         base_model=base_model,
         finetuned_model=finetuned_model,
         target_task=target_task,
-        profile=profile,
         num_samples=num_samples,
         deep_analysis=deep,
         device=_resolve_device(device),

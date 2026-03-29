@@ -91,7 +91,6 @@ class ProfileLoader:
         all_probes = list(dict.fromkeys(profile.target_probes + profile.general_probes))
 
         overrides: dict = {
-            "profile": profile_name,
             "general_probes": all_probes,
         }
         if profile.num_samples_override is not None:

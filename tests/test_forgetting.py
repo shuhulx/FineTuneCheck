@@ -78,9 +78,10 @@ class TestCapabilityRetentionRate:
         base = _make_scores({"code": 0.0, "math": 0.0})
         ft = _make_scores({"code": 0.0, "math": 0.5})
         rates = capability_retention_rate(base, ft)
-        # 0/0 -> 1.0 (both zero = retained), nonzero/0 -> 1.0 (no baseline to regress from)
+        # 0/0 -> 1.0 (both zero = full retention)
         assert rates["code"] == 1.0
-        assert rates["math"] == 1.0
+        # base=0, ft nonzero -> return ft score directly (mirrors SAR zero-base semantics)
+        assert rates["math"] == 0.5
 
     def test_crr_excludes_target(self):
         """CRR should exclude the target category."""

@@ -80,9 +80,10 @@ def capability_retention_rate(
             continue
         ft = ft_scores[cat]
         if base.mean_score == 0.0:
-            # Base was 0 → nothing to retain. Return 1.0 whether ft improved or not,
-            # because CRR measures retention of existing capability, not gain.
-            crr[cat] = 1.0
+            # Base was 0 → nothing to retain. If ft is also 0, that's full retention
+            # (1.0). If ft is nonzero, report the ft score directly (no denominator to
+            # divide by). Mirrors SAR's zero-base handling.
+            crr[cat] = 1.0 if ft.mean_score == 0.0 else ft.mean_score
         else:
             crr[cat] = ft.mean_score / base.mean_score
     return crr

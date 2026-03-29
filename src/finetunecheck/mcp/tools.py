@@ -62,7 +62,6 @@ async def handle_evaluate_finetune(arguments: dict[str, Any]) -> str:
         base_model=arguments["base_model"],
         finetuned_model=arguments["finetuned_model"],
         target_task=arguments.get("target_task"),
-        profile=arguments.get("profile"),
         num_samples=arguments.get("num_samples", 100),
         deep_analysis=arguments.get("deep_analysis", False),
         device=detect_device(arguments.get("device") or "auto"),

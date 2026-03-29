@@ -11,7 +11,6 @@ class EvalConfig(BaseModel):
     base_model: str
     finetuned_model: str
     target_task: str | None = None
-    profile: str | None = None
     general_probes: list[str] = Field(
         default_factory=lambda: [
             "reasoning",
@@ -25,7 +24,6 @@ class EvalConfig(BaseModel):
         ]
     )
     num_samples: int = 100
-    mode: Literal["quick", "standard", "thorough"] = "standard"
     deep_analysis: bool = False
     deep_analysis_samples: int = 256
     device: str = "auto"
@@ -45,4 +43,3 @@ class QuickConfig(EvalConfig):
     general_probes: list[str] = Field(
         default_factory=lambda: ["reasoning", "code", "math", "safety"]
     )
-    mode: Literal["quick", "standard", "thorough"] = "quick"
