@@ -8,7 +8,7 @@ Automated base-vs-fine-tuned comparison with forgetting detection, capability re
 [![Downloads](https://img.shields.io/pypi/dm/finetunecheck)](https://pypi.org/project/finetunecheck/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-144%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-172%20passed-brightgreen.svg)]()
 
 ---
 
@@ -92,12 +92,14 @@ ftcheck list-profiles
 from finetunecheck import EvalRunner
 from finetunecheck.config import EvalConfig
 
+from finetunecheck.profiles.loader import ProfileLoader
+
 config = EvalConfig(
     base_model="meta-llama/Llama-3-8B",
     finetuned_model="./my-finetuned-model",
-    profile="code",
     deep_analysis=True,
 )
+config = ProfileLoader.apply_to_config("code", config)
 
 runner = EvalRunner(config)
 results = runner.run()
@@ -222,7 +224,7 @@ ProbeRegistry.register_from_jsonl("my_probes.jsonl", name="custom", category="do
 }
 ```
 
-Tools: `run_evaluation`, `quick_check`, `compare_runs`, `get_forgetting_report`, `list_probes`, `list_profiles`, `get_probe_details`, `analyze_deep`, `generate_report`
+Tools: `evaluate_finetune`, `quick_check`, `detect_forgetting`, `compare_runs`, `get_verdict`, `suggest_fixes`, `generate_report`, `list_profiles`, `run_probe`
 
 ## Export Formats
 

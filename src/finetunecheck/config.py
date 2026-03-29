@@ -34,6 +34,8 @@ class EvalConfig(BaseModel):
     output_format: Literal["html", "json", "csv", "markdown"] = "html"
     batch_size: int = 32
     max_tokens: int = 512
+    verdict_weights: dict[str, float] = Field(default_factory=dict)
+    extra_checks: list[str] = Field(default_factory=list)
 
 
 class QuickConfig(EvalConfig):

@@ -161,5 +161,4 @@ def eval_config():
         base_model="test-base",
         finetuned_model="test-ft",
         num_samples=5,
-        mode="quick",
     )

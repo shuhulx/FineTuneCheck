@@ -86,6 +86,7 @@ class EvalRunner:
         self._baseline_mgr = BaselineManager()
         self._base_backend: InferenceBackend | None = None
         self._ft_backend: InferenceBackend | None = None
+        self._probes: list[ProbeSet] = []
 
     def run(self) -> EvalResults:
         """Full evaluation pipeline.
@@ -130,6 +131,7 @@ class EvalRunner:
         try:
             # Build probe sets
             probes = self._build_probes()
+            self._probes = probes
 
             console.print("[bold]Evaluating base model...[/bold]")
             base_scores = self._evaluate_model(
@@ -318,6 +320,11 @@ class EvalRunner:
         ft_scores: dict[str, CategoryScore],
     ) -> list[SampleRegression]:
         """Find individual samples where the fine-tuned model regressed."""
+        # Build a lookup: category -> {sample_id -> prompt text}
+        probe_text: dict[str, dict[str, str]] = {}
+        for probe in self._probes:
+            probe_text[probe.name] = {s.id: s.input for s in probe.samples}
+
         regressions = []
         for cat in base_scores:
             base = base_scores[cat]
@@ -326,6 +333,7 @@ class EvalRunner:
                 continue
             base_verdicts = {v.sample_id: v for v in base.sample_verdicts}
             ft_verdicts = {v.sample_id: v for v in ft.sample_verdicts}
+            cat_probe_text = probe_text.get(cat, {})
 
             for sid in base_verdicts:
                 if sid not in ft_verdicts:
@@ -338,7 +346,7 @@ class EvalRunner:
                         SampleRegression(
                             category=cat,
                             sample_id=sid,
-                            prompt="",
+                            prompt=cat_probe_text.get(sid, ""),
                             base_answer=bv.explanation,
                             ft_answer=fv.explanation,
                             base_score=bv.score,
@@ -382,7 +390,11 @@ class EvalRunner:
         concerns: list[str] = []
         recommendations: list[str] = []
 
-        roi = Scorer.compute_roi(target_imp, forgetting)
+        roi = Scorer.compute_roi(
+            target_imp,
+            forgetting,
+            weights=self.config.verdict_weights or None,
+        )
 
         if forgetting.pattern == ForgettingPattern.CATASTROPHIC:
             concerns.append(

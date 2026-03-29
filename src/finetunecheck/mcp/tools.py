@@ -57,6 +57,7 @@ async def handle_evaluate_finetune(arguments: dict[str, Any]) -> str:
     """Run comprehensive evaluation."""
     from finetunecheck.config import EvalConfig
     from finetunecheck.eval.runner import EvalRunner
+    from finetunecheck.profiles.loader import ProfileLoader
 
     config = EvalConfig(
         base_model=arguments["base_model"],
@@ -66,6 +67,10 @@ async def handle_evaluate_finetune(arguments: dict[str, Any]) -> str:
         deep_analysis=arguments.get("deep_analysis", False),
         device=detect_device(arguments.get("device") or "auto"),
     )
+
+    profile_name = arguments.get("profile")
+    if profile_name:
+        config = ProfileLoader.apply_to_config(profile_name, config)
 
     runner = EvalRunner(config)
     results = runner.run()

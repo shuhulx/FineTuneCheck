@@ -99,6 +99,12 @@ class ProfileLoader:
         if profile.target_probes:
             overrides["target_task"] = profile.target_probes[0]
 
+        if profile.verdict_weights:
+            overrides["verdict_weights"] = profile.verdict_weights
+
+        if profile.extra_checks:
+            overrides["extra_checks"] = profile.extra_checks
+
         return config.model_copy(update=overrides)
 
     @classmethod

@@ -45,12 +45,19 @@ class Scorer:
     def compute_roi(
         target_improvement: float,
         forgetting_report: ForgettingReport | None,
+        weights: dict[str, float] | None = None,
     ) -> float:
         """Composite ROI score 0-100.
 
         Delegates to ``forgetting.metrics.compute_roi_score`` for a unified
         5-component formula that accounts for target improvement, retention,
         safety, selectivity penalty, and backward transfer penalty.
+
+        Args:
+            target_improvement: Score improvement on the target task.
+            forgetting_report: Forgetting metrics, or None if unavailable.
+            weights: Optional weight overrides passed through to
+                ``compute_roi_score``.
         """
         if forgetting_report is not None:
             retention_rates = list(forgetting_report.capability_retention_rates.values())
@@ -70,4 +77,5 @@ class Scorer:
             sar=sar,
             sfi=sfi,
             mean_crr=mean_crr,
+            weights=weights or None,
         )
