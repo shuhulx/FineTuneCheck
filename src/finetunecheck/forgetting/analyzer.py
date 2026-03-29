@@ -88,6 +88,7 @@ class ForgettingAnalyzer:
         ft_results: dict[str, list[JudgeVerdict]] | None = None,
         probes: dict[str, ProbeSet] | None = None,
         target_categories: list[str] | None = None,
+        target_task: str | None = None,
     ) -> ForgettingReport:
         """Run the full forgetting analysis pipeline.
 
@@ -104,13 +105,15 @@ class ForgettingAnalyzer:
                 (needed for regression analysis).
             probes: Optional per-category probe sets (needed for regression context).
             target_categories: Categories that were the target of fine-tuning.
+            target_task: Single target task to exclude from CRR (consistent with
+                runner._compute_forgetting).
 
         Returns:
             A complete ``ForgettingReport``.
         """
         bwt = backward_transfer(base_scores, ft_scores, target_categories)
 
-        crr = capability_retention_rate(base_scores, ft_scores)
+        crr = capability_retention_rate(base_scores, ft_scores, target_task)
 
         sfi = selective_forgetting_index(crr)
 

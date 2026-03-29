@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finetunecheck"
-version = "0.2.3"
+version = "0.2.4"
 description = "Automated base vs fine-tuned LLM comparison with forgetting detection, capability retention scoring, and visual diff reports."
 readme = "README.md"
 license = "Apache-2.0"

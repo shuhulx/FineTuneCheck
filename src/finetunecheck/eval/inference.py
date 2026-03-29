@@ -229,7 +229,11 @@ def create_backend(spec: ModelSpec, device: str = "auto") -> InferenceBackend:
     Priority for HF/LoRA: vLLM > transformers.
     GGUF always uses llama.cpp.
     """
-    resolved_device = detect_device(device)
+    # When device is "auto", pass device_map="auto" directly to HuggingFace
+    # Accelerate so it can distribute across all available GPUs. Only resolve
+    # to a concrete device string for explicit device requests.
+    use_device_map_auto = device == "auto"
+    resolved_device = device if use_device_map_auto else detect_device(device)
 
     if spec.model_type == ModelType.GGUF:
         return LlamaCppBackend(spec.path)
@@ -255,25 +259,25 @@ def create_backend(spec: ModelSpec, device: str = "auto") -> InferenceBackend:
         base = AutoModelForCausalLM.from_pretrained(
             spec.base_model,
             torch_dtype=torch.float16,
-            device_map=resolved_device if resolved_device == "auto" else None,
+            device_map="auto" if use_device_map_auto else None,
         )
         model = PeftModel.from_pretrained(base, spec.path)
         model = model.merge_and_unload()
-        if resolved_device not in ("auto",):
+        if not use_device_map_auto:
             model = model.to(resolved_device)
         tokenizer = AutoTokenizer.from_pretrained(spec.base_model)
     else:
         model = AutoModelForCausalLM.from_pretrained(
             spec.path,
             torch_dtype=torch.float16,
-            device_map=resolved_device if resolved_device == "auto" else None,
+            device_map="auto" if use_device_map_auto else None,
         )
-        if resolved_device not in ("auto",):
+        if not use_device_map_auto:
             model = model.to(resolved_device)
         tokenizer = AutoTokenizer.from_pretrained(spec.path)
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    actual_device = resolved_device if resolved_device != "auto" else "cpu"
+    actual_device = resolved_device if not use_device_map_auto else "cpu"
     return TransformersBackend(model, tokenizer, actual_device, spec.path)

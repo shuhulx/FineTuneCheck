@@ -330,12 +330,33 @@ Output ONLY a JSON object with two fields:
         raise ValueError(f"Unsupported API client type: {type(client)}")
 
     @staticmethod
+    def _find_outermost_json(text: str) -> str | None:
+        """Find the outermost {...} block by counting brace depth."""
+        depth = 0
+        start = None
+        for i, ch in enumerate(text):
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and start is not None:
+                    return text[start : i + 1]
+        return None
+
+    @staticmethod
     def _parse_judgment(raw: str) -> tuple[float, str]:
         raw = raw.strip()
-        json_match = re.search(r"\{.*?\}", raw, re.DOTALL)
-        if json_match:
+        json_str = LLMJudge._find_outermost_json(raw)
+        if json_str is None:
+            # Fallback: handle one level of nesting
+            json_str_m = re.search(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", raw, re.DOTALL)
+            json_str = json_str_m.group() if json_str_m else None
+
+        if json_str is not None:
             try:
-                data = json.loads(json_match.group())
+                data = json.loads(json_str)
                 score_raw = data.get("score", 5)
                 score = max(0.0, min(1.0, float(score_raw) / 10.0))
                 explanation = data.get("explanation", "")
