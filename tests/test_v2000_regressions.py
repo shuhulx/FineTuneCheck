@@ -317,12 +317,12 @@ def test_different_weight_files_never_share_a_baseline_cache_key(tmp_path: Path)
     assert key_a != key_b
 
 
-def test_release_version_is_2_0_0_everywhere() -> None:
+def test_release_version_is_2_0_1_everywhere() -> None:
     import finetunecheck
     from finetunecheck._version import __version__ as source_version
 
-    assert finetunecheck.__version__ == "2.0.0"
-    assert source_version == "2.0.0"
+    assert finetunecheck.__version__ == "2.0.1"
+    assert source_version == "2.0.1"
 
 
 def test_release_metadata_declares_beta_maturity() -> None:

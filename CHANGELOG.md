@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1 — Packaging fixes
+
+- Cleaner docs and release builds
+
 ## 2.0.0 — Major fixes
 
 - Safer evaluation and report handling

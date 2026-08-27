@@ -489,7 +489,7 @@ def test_mcp_report_commit_never_follows_a_raced_destination_symlink(
         assert "Report generated" in message
         assert destination.is_file()
         assert destination.is_symlink() is False
-        assert json.loads(destination.read_text(encoding="utf-8"))["package_version"] == "2.0.0"
+        assert json.loads(destination.read_text(encoding="utf-8"))["package_version"] == "2.0.1"
     else:
         with pytest.raises(ValueError, match="overwrite"):
             asyncio.run(handle_generate_report(arguments))
@@ -584,10 +584,10 @@ def test_report_and_result_provenance_use_release_version(
     from finetunecheck import __version__
     from finetunecheck.report.generator import ReportGenerator
 
-    assert sample_eval_results.package_version == __version__ == "2.0.0"
+    assert sample_eval_results.package_version == __version__ == "2.0.1"
     output = tmp_path / "version-report.html"
     ReportGenerator().generate(sample_eval_results, str(output))
-    assert "FineTuneCheck v2.0.0" in output.read_text(encoding="utf-8")
+    assert "FineTuneCheck v2.0.1" in output.read_text(encoding="utf-8")
 
 
 def test_mcp_schemas_are_closed_and_positive_counts_are_enforced() -> None:
@@ -612,4 +612,4 @@ def test_serialized_result_has_schema_metric_and_package_provenance(sample_eval_
     payload = json.loads(sample_eval_results.model_dump_json())
     assert payload["result_schema_version"] == "2.0.0"
     assert payload["metric_schema_version"] == "2.0.0"
-    assert payload["package_version"] == "2.0.0"
+    assert payload["package_version"] == "2.0.1"
