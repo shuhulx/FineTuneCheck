@@ -1,4 +1,4 @@
-"""Versioned, provenance-complete baseline cache."""
+"""Baseline cache keyed by model and evaluation details."""
 
 from __future__ import annotations
 

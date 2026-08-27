@@ -1,5 +1,5 @@
 name: legal
-description: "Legal domain fine-tuning evaluation. Focuses on reasoning and entity/clause extraction with heightened safety requirements."
+description: "Checks reasoning and extraction for legal fine-tunes, with extra weight on safety."
 target_probes:
   - reasoning
   - extraction

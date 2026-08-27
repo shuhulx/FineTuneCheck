@@ -71,7 +71,7 @@ def test_real_exporters_preserve_versions_missing_statuses_and_deep_evidence(
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "Deep Analysis" in markdown
     assert "Unavailable" in markdown or "MISSING" in markdown
-    assert "diagnostic evidence, not deployment approval" in markdown
+    assert "Review the samples before shipping" in markdown
 
 
 def test_exporters_handle_no_forgetting_no_target_no_summary(tmp_path: Path) -> None:
@@ -156,7 +156,7 @@ def test_shipped_basic_example_executes(monkeypatch, capsys, sample_eval_results
     output = capsys.readouterr().out
     assert "Verdict:" in output
     assert "ROI Score:" in output
-    assert "Diagnostic evidence only" in output
+    assert "domain checks before shipping" in output
 
 
 def test_forgetting_analyzer_retains_evidence_and_missing_semantics() -> None:
@@ -345,7 +345,7 @@ def test_mcp_handlers_cover_every_operation_with_protocol_summaries(
     assert tools._judge({"judge": {"provider": "local", "model": "judge"}}).model == "judge"
     assert tools._paired_config(common).device == "auto"
     summary = tools._results_summary(sample_eval_results)
-    assert "not independent deployment approval" in summary
+    assert "run your own checks before shipping" in summary
 
     evaluated = asyncio.run(tools.handle_evaluate_finetune(common | {"profile": "classification"}))
     quick = asyncio.run(tools.handle_quick_check(common))

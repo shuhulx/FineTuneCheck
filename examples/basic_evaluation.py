@@ -53,7 +53,7 @@ def main() -> None:
             else "Backward Transfer: unavailable"
         )
 
-    print("\nDiagnostic evidence only; not independent deployment approval.")
+    print("\nReview the sample-level results and run your own domain checks before shipping.")
 
 
 if __name__ == "__main__":

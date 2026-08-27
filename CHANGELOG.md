@@ -2,6 +2,6 @@
 
 ## 2.0.0 — Major fixes
 
-- Safe evaluation boundaries
-- Correct metrics and evidence
-- Reliable reports, MCP, packaging, and tests
+- Safer evaluation and report handling
+- More reliable metrics and cache results
+- Better packaging, CLI, MCP, and tests

@@ -156,7 +156,7 @@ def run(
     ),
     cache: bool = typer.Option(True, "--cache/--no-cache", help="Cache baseline results"),
 ) -> None:
-    """Run comprehensive fine-tuning evaluation."""
+    """Compare a fine-tuned model with its base model."""
     if num_samples <= 0:
         console.print("[red]Error: --num-samples must be greater than 0.[/red]")
         raise typer.Exit(1)

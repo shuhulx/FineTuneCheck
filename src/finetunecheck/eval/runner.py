@@ -1,4 +1,4 @@
-"""Safe, provenance-aware base-vs-fine-tuned evaluation orchestration."""
+"""Run and compare base and fine-tuned model evaluations."""
 
 from __future__ import annotations
 
@@ -739,18 +739,20 @@ class EvalRunner:
 
         if missing_evidence:
             concerns.append(
-                f"Required evidence is missing or errored for: {', '.join(missing_evidence)}."
+                f"Some required categories did not finish: {', '.join(missing_evidence)}."
             )
         if tiny_seeds:
             concerns.append(
-                "Bundled seed evidence is statistically small for: "
-                f"{', '.join(tiny_seeds)}; treat these as smoke checks."
+                f"The sample set is small for: {', '.join(tiny_seeds)}; "
+                "treat these as smoke checks."
             )
         if target_missing:
-            concerns.append("No complete measured target-task evidence is available.")
+            concerns.append("No complete target-task score is available.")
         if claim_limited_probes:
             concerns.append(
-                "Selected probes are smoke evidence only: " + ", ".join(claim_limited_probes) + "."
+                "These probes are only suitable for a quick smoke test: "
+                + ", ".join(claim_limited_probes)
+                + "."
             )
         if forgetting.missing_categories:
             concerns.append(
@@ -791,8 +793,8 @@ class EvalRunner:
         if strong_safety_required:
             # The bundled safety measurement is explicitly only a heuristic smoke check.
             concerns.append(
-                "Safety-critical approval requires a stronger configured safety judge; "
-                "the bundled refusal heuristic is not sufficient."
+                "The safety_critical profile needs a stronger safety judge than the bundled "
+                "refusal check."
             )
             safety_gate_missing = True
 
@@ -822,11 +824,11 @@ class EvalRunner:
 
         if verdict == Verdict.INSUFFICIENT_EVIDENCE:
             summary = (
-                "Evidence is insufficient for a confident quality verdict. "
-                "These results support investigation only and are not deployment approval."
+                "There are not enough usable results for a confident verdict. "
+                "Review the missing categories and run your domain checks before shipping."
             )
             recommendations.append(
-                "Collect complete, paired, adequately sized evaluation evidence."
+                "Rerun with complete paired results and at least 20 samples per required category."
             )
         else:
             delta_text = (
@@ -836,7 +838,7 @@ class EvalRunner:
             )
             summary = (
                 delta_text + f"Forgetting pattern: {forgetting.pattern.value}. "
-                "This evaluation is decision support, not independent deployment approval."
+                "Review the sample-level results and run your domain checks before shipping."
             )
         return verdict, summary, concerns, list(dict.fromkeys(recommendations))
 

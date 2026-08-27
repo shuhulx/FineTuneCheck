@@ -1,5 +1,5 @@
 name: code
-description: "Code generation fine-tuning evaluation. Uses execution-based judging for code probes and validates mathematical reasoning retention."
+description: "Checks code and math gains while watching reasoning, instruction following, and safety."
 target_probes:
   - code
   - math

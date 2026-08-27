@@ -323,3 +323,11 @@ def test_release_version_is_2_0_0_everywhere() -> None:
 
     assert finetunecheck.__version__ == "2.0.0"
     assert source_version == "2.0.0"
+
+
+def test_release_metadata_declares_beta_maturity() -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    metadata = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert '"Development Status :: 4 - Beta"' in metadata
+    assert '"Development Status :: 3 - Alpha"' not in metadata

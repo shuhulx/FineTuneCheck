@@ -1,5 +1,5 @@
 name: classification
-description: "Classification and extraction fine-tuning evaluation. Lightweight profile suitable for quick evaluations of discriminative fine-tuning."
+description: "A lightweight check for classification and extraction fine-tunes."
 target_probes:
   - classification
   - extraction

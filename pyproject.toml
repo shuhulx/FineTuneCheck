@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "finetunecheck"
 dynamic = ["version"]
-description = "Automated base vs fine-tuned LLM comparison with forgetting detection, capability retention scoring, and visual diff reports."
+description = "Compare base and fine-tuned language models, catch regressions, and inspect the results behind every score."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [{ name = "Shuhul Razdan", email = "shuhul.aiml@gmail.com" }]
 keywords = ["llm", "fine-tuning", "evaluation", "forgetting", "catastrophic-forgetting", "model-comparison", "lora", "peft", "deep-learning", "transformers"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
@@ -55,7 +55,7 @@ dev = [
     "pytest>=8.0",
     "pytest-cov",
     "pytest-asyncio",
-    "ruff",
+    "ruff==0.16.4",
 ]
 all = [
     "torch>=2.0,<3.0",
@@ -74,6 +74,7 @@ all = [
 Homepage = "https://github.com/shuhulx/finetunecheck"
 Repository = "https://github.com/shuhulx/finetunecheck"
 Issues = "https://github.com/shuhulx/finetunecheck/issues"
+Changelog = "https://github.com/shuhulx/finetunecheck/blob/main/CHANGELOG.md"
 
 [project.scripts]
 ftcheck = "finetunecheck.cli:app"

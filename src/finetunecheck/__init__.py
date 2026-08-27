@@ -1,4 +1,4 @@
-"""FineTuneCheck — automated evaluation of LLM fine-tuning outcomes."""
+"""Compare a fine-tuned language model with the model it started from."""
 
 from __future__ import annotations
 

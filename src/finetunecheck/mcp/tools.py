@@ -1,4 +1,4 @@
-"""Async MCP handlers backed by a bounded worker pool."""
+"""MCP handlers with a small worker limit for model jobs."""
 
 from __future__ import annotations
 
@@ -85,7 +85,7 @@ def _results_summary(results) -> str:
     lines.extend(
         [
             "",
-            "FineTuneCheck results support investigation and are not independent deployment approval.",
+            "Use this as a starting point. Review the samples and run your own checks before shipping.",
         ]
     )
     return "\n".join(lines)
@@ -178,7 +178,7 @@ async def handle_suggest_fixes(arguments: dict[str, Any]) -> str:
     lines = [f"Evidence verdict: {results.verdict.value}"]
     lines.extend(f"{index}. {item}" for index, item in enumerate(results.recommendations, 1))
     if not results.recommendations:
-        lines.append("No recommendation was generated; inspect evidence coverage before acting.")
+        lines.append("No recommendation was generated. Check which categories actually ran.")
     return "\n".join(lines)
 
 

@@ -1,5 +1,5 @@
 name: medical
-description: "Medical-domain smoke evaluation emphasizing reasoning, factual knowledge, instruction following, and refusal/over-refusal controls. It does not measure clinical hallucination rate."
+description: "A medical-domain smoke check for reasoning, factual answers, instruction following, and refusal behavior. It does not measure clinical hallucination."
 target_probes:
   - reasoning
   - world_knowledge

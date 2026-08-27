@@ -1,11 +1,11 @@
-"""MCP server for FineTuneCheck — exposes evaluation tools to AI assistants."""
+"""MCP server for running FineTuneCheck from an AI assistant."""
 
 from __future__ import annotations
 
 import logging
 import traceback
 
-from mcp.server import Server
+from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool
 
@@ -33,26 +33,24 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="evaluate_finetune",
             description=(
-                "Run evidence-aware fine-tuning evaluation comparing a base model "
-                "against a fine-tuned model. Results support investigation and do "
-                "not independently approve deployment."
+                "Compare a base model with a fine-tuned model and return the scores, "
+                "regressions, and samples behind the result."
             ),
             inputSchema=EVALUATE_FINETUNE_SCHEMA,
         ),
         Tool(
             name="quick_check",
             description=(
-                "Offline deterministic smoke evaluation on math, classification, "
-                "instruction constraints, and refusal/over-refusal controls."
+                "Run a small local check for math, classification, instruction following, "
+                "and refusal behavior."
             ),
             inputSchema=QUICK_CHECK_SCHEMA,
         ),
         Tool(
             name="detect_forgetting",
             description=(
-                "Analyze catastrophic forgetting in a fine-tuned model. Returns "
-                "forgetting pattern, backward transfer score, capability retention "
-                "rates, and worst regressions."
+                "Show which non-target capabilities changed after fine-tuning, including "
+                "retention rates and the worst regressions."
             ),
             inputSchema=DETECT_FORGETTING_SCHEMA,
         ),
@@ -60,32 +58,31 @@ async def list_tools() -> list[Tool]:
             name="compare_runs",
             description=(
                 "Compare multiple fine-tuning runs against the same base model. "
-                "Finds best run by ROI, best target performance, least forgetting, "
-                "and computes Pareto frontier."
+                "Shows the best target score, strongest retention, overall ROI, and "
+                "Pareto frontier."
             ),
             inputSchema=COMPARE_RUNS_SCHEMA,
         ),
         Tool(
             name="get_verdict",
             description=(
-                "Get a quick evidence verdict, including INSUFFICIENT_EVIDENCE when "
-                "required measurements are absent or statistically small."
+                "Get a quick verdict. Returns INSUFFICIENT_EVIDENCE when important "
+                "results are missing or the sample is too small."
             ),
             inputSchema=GET_VERDICT_SCHEMA,
         ),
         Tool(
             name="suggest_fixes",
             description=(
-                "Get actionable recommendations for improving a fine-tuning "
-                "outcome based on detected issues."
+                "Suggest practical follow-up checks and training changes based on the "
+                "problems found in a run."
             ),
             inputSchema=SUGGEST_FIXES_SCHEMA,
         ),
         Tool(
             name="generate_report",
             description=(
-                "Create a diagnostic report (HTML, JSON, CSV, or Markdown) "
-                "with visualizations and detailed analysis."
+                "Write an HTML, JSON, CSV, or Markdown report with charts and sample-level details."
             ),
             inputSchema=GENERATE_REPORT_SCHEMA,
         ),
@@ -97,8 +94,7 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="run_probe",
             description=(
-                "Run a specific probe set on a single model. Useful for testing "
-                "individual capabilities."
+                "Run one probe set on a model when you only want to inspect a single capability."
             ),
             inputSchema=RUN_PROBE_SCHEMA,
         ),

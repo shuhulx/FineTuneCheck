@@ -1,5 +1,5 @@
 name: rag
-description: "Retrieval-augmented generation fine-tuning evaluation. Targets extraction, summarization, and factual knowledge with reasoning retention."
+description: "Checks extraction, summarization, and factual answers while watching reasoning retention."
 target_probes:
   - extraction
   - summarization

@@ -1,5 +1,5 @@
 name: general
-description: "Balanced evaluation across all capability categories. Suitable as a default profile for any fine-tuning evaluation."
+description: "A broad pass across every bundled capability category."
 target_probes: []
 general_probes:
   - reasoning

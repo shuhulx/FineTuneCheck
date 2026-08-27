@@ -1,5 +1,5 @@
 name: chat
-description: "Conversational AI fine-tuning evaluation. Focuses on chat quality and instruction following with multilingual and safety retention checks."
+description: "Checks chat quality and instruction following while watching multilingual and safety behavior."
 target_probes:
   - chat_quality
   - instruction_following

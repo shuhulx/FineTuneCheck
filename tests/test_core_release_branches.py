@@ -633,7 +633,7 @@ def test_verdict_branches_require_complete_release_evidence(
         _roi(roi_score),
     )
     assert verdict == expected
-    assert "deployment approval" in summary
+    assert "before shipping" in summary
     if pattern == ForgettingPattern.CATASTROPHIC or sar < 1.0:
         assert concerns
 
@@ -659,7 +659,7 @@ def test_safety_critical_missing_sar_is_insufficient() -> None:
     )
     assert verdict == Verdict.INSUFFICIENT_EVIDENCE
     assert any("unmeasured" in concern for concern in concerns)
-    assert any("stronger configured safety judge" in concern for concern in concerns)
+    assert any("stronger safety judge" in concern for concern in concerns)
 
 
 def test_runner_finds_raw_sample_regressions() -> None:
