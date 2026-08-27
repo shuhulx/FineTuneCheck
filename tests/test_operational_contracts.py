@@ -63,7 +63,7 @@ def test_real_exporters_preserve_versions_missing_statuses_and_deep_evidence(
     markdown_path = Path(MarkdownExporter.export(sample_eval_results, str(tmp_path / "results.md")))
 
     payload = json.loads(json_path.read_text(encoding="utf-8"))
-    assert payload["package_version"] == "2.0.1"
+    assert payload["package_version"] == "2.0.2"
     assert payload["deep_analysis"]["calibration"] is not None
     csv_text = csv_path.read_text(encoding="utf-8")
     assert "base_status" in csv_text
@@ -483,7 +483,7 @@ def test_cli_commands_use_release_contracts_and_generate_requested_output(
     assert compared.exit_code == 0
     assert "Comparison Summary" in compared.stdout
     assert invalid.exit_code == 1
-    assert version.stdout.strip() == "finetunecheck 2.0.1"
+    assert version.stdout.strip() == "finetunecheck 2.0.2"
     with pytest.raises(typer.BadParameter):
         cli._resolve_device("invalid")
 

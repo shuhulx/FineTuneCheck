@@ -101,7 +101,7 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
 
-          wheel = next(Path("dist").glob("finetunecheck-2.0.1-*.whl"))
+          wheel = next(Path("dist").glob("finetunecheck-2.0.2-*.whl"))
           with ZipFile(wheel) as archive:
               names = set(archive.namelist())
           assert "finetunecheck/py.typed" in names
@@ -113,19 +113,19 @@ jobs:
       - name: Fresh core wheel
         run: |
           python -m venv /tmp/ftcheck-core
-          /tmp/ftcheck-core/bin/pip install dist/finetunecheck-2.0.1-py3-none-any.whl
+          /tmp/ftcheck-core/bin/pip install dist/finetunecheck-2.0.2-py3-none-any.whl
           /tmp/ftcheck-core/bin/pip check
-          /tmp/ftcheck-core/bin/python -c "import importlib.metadata, sys, finetunecheck; assert finetunecheck.__version__ == importlib.metadata.version('finetunecheck') == '2.0.1'; assert 'torch' not in sys.modules and 'transformers' not in sys.modules"
+          /tmp/ftcheck-core/bin/python -c "import importlib.metadata, sys, finetunecheck; assert finetunecheck.__version__ == importlib.metadata.version('finetunecheck') == '2.0.2'; assert 'torch' not in sys.modules and 'transformers' not in sys.modules"
           /tmp/ftcheck-core/bin/ftcheck --version
       - name: Fresh MCP wheel
         run: |
           python -m venv /tmp/ftcheck-mcp
-          /tmp/ftcheck-mcp/bin/pip install "dist/finetunecheck-2.0.1-py3-none-any.whl[mcp]"
+          /tmp/ftcheck-mcp/bin/pip install "dist/finetunecheck-2.0.2-py3-none-any.whl[mcp]"
           /tmp/ftcheck-mcp/bin/pip check
           /tmp/ftcheck-mcp/bin/python -c "import asyncio; from finetunecheck.mcp.server import list_tools; assert len(asyncio.run(list_tools())) == 9"
       - name: Fresh inference wheel
         run: |
           python -m venv /tmp/ftcheck-inference
-          /tmp/ftcheck-inference/bin/pip install "dist/finetunecheck-2.0.1-py3-none-any.whl[inference]"
+          /tmp/ftcheck-inference/bin/pip install "dist/finetunecheck-2.0.2-py3-none-any.whl[inference]"
           /tmp/ftcheck-inference/bin/pip check
           /tmp/ftcheck-inference/bin/python -c "import peft, torch, transformers; from finetunecheck.eval.inference import TransformersBackend; from finetunecheck.utils.model_loader import ModelLoader; assert TransformersBackend and ModelLoader and peft and torch and transformers"
