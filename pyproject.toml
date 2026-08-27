@@ -12,7 +12,6 @@ requires-python = ">=3.10"
 authors = [{ name = "Shuhul Razdan", email = "shuhul.aiml@gmail.com" }]
 keywords = ["llm", "fine-tuning", "evaluation", "forgetting", "catastrophic-forgetting", "model-comparison", "lora", "peft", "deep-learning", "transformers"]
 classifiers = [
-    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",

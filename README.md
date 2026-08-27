@@ -6,7 +6,6 @@ Compare a fine-tuned model with its base and see what improved, what slipped, an
 [![Tests](https://img.shields.io/badge/tests-304%20passed-brightgreen.svg)](https://github.com/shuhulx/finetunecheck/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/finetunecheck)](https://pypi.org/project/finetunecheck/)
 [![Downloads](https://static.pepy.tech/badge/finetunecheck)](https://pepy.tech/project/finetunecheck)
-[![Development Status: Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://pypi.org/project/finetunecheck/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 
