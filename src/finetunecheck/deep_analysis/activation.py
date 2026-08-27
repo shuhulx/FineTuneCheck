@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from finetunecheck.models import ActivationDriftReport
+from finetunecheck.models import ActivationDriftReport, MeasurementStatus
 from finetunecheck.utils.device import resolve_model_device
 
 if TYPE_CHECKING:
@@ -44,6 +44,7 @@ class ActivationDriftAnalyzer:
         self.batch_size = batch_size
         self.head_threshold = head_threshold
         self.max_length = max_length
+        self._attention_available = False
 
     def _collect_hidden_states_pooled(
         self,
@@ -75,7 +76,7 @@ class ActivationDriftAnalyzer:
             input_ids = encodings["input_ids"].to(device)
             attention_mask = encodings["attention_mask"].to(device)
 
-            hidden_states = model.get_hidden_states(input_ids)
+            hidden_states = model.get_hidden_states(input_ids, attention_mask=attention_mask)
             mask_expanded = attention_mask.unsqueeze(-1).float()
 
             for layer_idx, states in hidden_states.items():
@@ -162,8 +163,12 @@ class ActivationDriftAnalyzer:
             input_ids_ft = encodings["input_ids"].to(ft_device)
 
             try:
-                base_attn = base_model.get_attention_weights(input_ids_base)
-                ft_attn = ft_model.get_attention_weights(input_ids_ft)
+                base_mask = encodings["attention_mask"].to(base_device)
+                ft_mask = encodings["attention_mask"].to(ft_device)
+                base_attn = base_model.get_attention_weights(
+                    input_ids_base, attention_mask=base_mask
+                )
+                ft_attn = ft_model.get_attention_weights(input_ids_ft, attention_mask=ft_mask)
             except Exception as exc:
                 logger.warning("Attention weight collection failed: %s", exc)
                 return []
@@ -195,6 +200,8 @@ class ActivationDriftAnalyzer:
                     if key not in head_sims:
                         head_sims[key] = []
                     head_sims[key].append(float(cos.mean().item()))
+
+        self._attention_available = bool(head_sims)
 
         # Aggregate and filter disrupted heads
         disrupted: list[dict] = []
@@ -235,6 +242,10 @@ class ActivationDriftAnalyzer:
         ft_states = self._collect_hidden_states_pooled(ft_model, texts, ft_device)
 
         per_layer_sim = self.compute_layer_drift(base_states, ft_states)
+        if not per_layer_sim:
+            raise ValueError(
+                "No compatible hidden-state layers were available for activation drift"
+            )
 
         logger.info("Scanning for disrupted attention heads...")
         disrupted_heads = self.find_disrupted_heads(
@@ -251,8 +262,17 @@ class ActivationDriftAnalyzer:
             len(disrupted_heads),
         )
 
+        attention_status = (
+            MeasurementStatus.MEASURED if self._attention_available else MeasurementStatus.NOT_RUN
+        )
         return ActivationDriftReport(
             per_layer_cosine_sim=per_layer_sim,
             disrupted_heads=disrupted_heads,
             mean_drift=mean_drift,
+            attention_status=attention_status,
+            attention_error=(
+                None
+                if self._attention_available
+                else "No comparable attention weights were exposed by both models"
+            ),
         )

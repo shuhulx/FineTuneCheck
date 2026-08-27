@@ -1,6 +1,7 @@
 {
   "name": "instruction_following",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "instruction_following",
   "judge_type": "rule_based",
   "judge_criteria": "Check if the output satisfies every constraint listed in metadata.constraints. Score 1.0 if all constraints pass, partial credit for fraction of constraints met.",

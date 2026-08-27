@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import plotly.graph_objects as go
 from jinja2 import Environment, PackageLoader
@@ -18,7 +20,10 @@ from finetunecheck.models import (
     Verdict,
 )
 
-_PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.32.0.min.js"
+if TYPE_CHECKING:
+    from finetunecheck.compare.multi_run import ComparisonResult
+
+_PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.35.2.min.js"
 
 _VERDICT_COLORS = {
     Verdict.EXCELLENT: "#10B981",
@@ -26,9 +31,10 @@ _VERDICT_COLORS = {
     Verdict.GOOD_WITH_CONCERNS: "#F59E0B",
     Verdict.POOR: "#EF4444",
     Verdict.HARMFUL: "#991B1B",
+    Verdict.INSUFFICIENT_EVIDENCE: "#64748B",
 }
 
-_LAYOUT_DEFAULTS = dict(
+_LAYOUT_DEFAULTS: dict[str, Any] = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
     font=dict(family="Inter, system-ui, -apple-system, sans-serif", color="#334155"),
@@ -36,10 +42,21 @@ _LAYOUT_DEFAULTS = dict(
 )
 
 
+def _figure_json(figure: go.Figure) -> str:
+    """Return Plotly JSON while defending against incomplete third-party stubs."""
+    payload = figure.to_json()
+    if not isinstance(payload, str):
+        raise RuntimeError("Plotly did not produce a JSON document")
+    return payload
+
+
 class ReportGenerator:
     """Generate self-contained HTML reports with embedded Plotly visualizations."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, plotly_mode: str = "inline") -> None:
+        if plotly_mode not in {"inline", "cdn"}:
+            raise ValueError("plotly_mode must be 'inline' or 'cdn'")
+        self.plotly_mode = plotly_mode
         self.env = Environment(
             loader=PackageLoader("finetunecheck", "report/templates"),
             autoescape=True,
@@ -69,11 +86,31 @@ class ReportGenerator:
         else:
             figures["deep_analysis"] = None
 
+        figure_payloads = {
+            key: (
+                {nested_key: json.loads(nested_value) for nested_key, nested_value in value.items()}
+                if isinstance(value, dict)
+                else json.loads(value)
+                if isinstance(value, str)
+                else value
+            )
+            for key, value in figures.items()
+        }
+        if self.plotly_mode == "inline":
+            from plotly.offline import get_plotlyjs
+
+            plotly_inline = get_plotlyjs()
+            plotly_src = None
+        else:
+            plotly_inline = None
+            plotly_src = _PLOTLY_CDN
+
         html = template.render(
             title=title,
             results=results,
-            figures=figures,
-            plotly_js=_PLOTLY_CDN,
+            figures=figure_payloads,
+            plotly_inline=plotly_inline,
+            plotly_src=plotly_src,
             version=__version__,
             verdict_color=_VERDICT_COLORS.get(results.verdict, "#6B7280"),
             verdict_label=results.verdict.value.replace("_", " "),
@@ -84,12 +121,92 @@ class ReportGenerator:
         out.write_text(html, encoding="utf-8")
         return str(out)
 
+    def generate_comparison(
+        self,
+        comparison: ComparisonResult,
+        output: str,
+        title: str = "FineTuneCheck Comparison Report",
+    ) -> str:
+        """Generate a genuine all-run comparison report."""
+        template = self.env.get_template("comparison.html.j2")
+        points = []
+        for name, result in comparison.runs.items():
+            points.append(
+                {
+                    "name": name,
+                    "model": result.finetuned_model,
+                    "target": result.target_improvement,
+                    "bwt": (result.forgetting.backward_transfer if result.forgetting else None),
+                    "roi": result.roi_score,
+                    "coverage": result.roi_coverage,
+                    "verdict": result.verdict.value,
+                    "pareto": name in comparison.pareto_frontier,
+                }
+            )
+        measured = [
+            point for point in points if point["target"] is not None and point["bwt"] is not None
+        ]
+        figure: dict = {}
+        if measured:
+            figure_object = go.Figure()
+            figure_object.add_trace(
+                go.Scatter(
+                    x=[point["target"] for point in measured],
+                    y=[point["bwt"] for point in measured],
+                    mode="markers+text",
+                    text=[point["name"] for point in measured],
+                    textposition="top center",
+                    marker={
+                        "size": 14,
+                        "color": [
+                            "#10B981" if point["pareto"] else "#94A3B8" for point in measured
+                        ],
+                    },
+                    customdata=[
+                        [point["verdict"], point["roi"], point["coverage"]] for point in measured
+                    ],
+                    hovertemplate=(
+                        "%{text}<br>Target delta %{x:.3f}<br>BWT %{y:.3f}<br>"
+                        "Verdict %{customdata[0]}<br>ROI %{customdata[1]}<br>"
+                        "Coverage %{customdata[2]:.0%}<extra></extra>"
+                    ),
+                )
+            )
+            figure_object.update_layout(
+                **_LAYOUT_DEFAULTS,
+                title="Target Improvement vs Backward Transfer",
+                xaxis_title="Target absolute delta (higher is better)",
+                yaxis_title="Backward transfer (higher is better)",
+                height=460,
+            )
+            figure = json.loads(_figure_json(figure_object))
+        plotly_inline = None
+        plotly_src = _PLOTLY_CDN
+        if self.plotly_mode == "inline":
+            from plotly.offline import get_plotlyjs
+
+            plotly_inline = get_plotlyjs()
+            plotly_src = None
+        html = template.render(
+            title=title,
+            comparison=comparison,
+            points=points,
+            figure=figure,
+            plotly_inline=plotly_inline,
+            plotly_src=plotly_src,
+            version=__version__,
+        )
+        out = Path(output)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(html, encoding="utf-8")
+        return str(out)
+
     # ------------------------------------------------------------------
     # Primary charts
     # ------------------------------------------------------------------
 
     def _build_radar_chart(self, results: EvalResults) -> str:
-        categories = sorted(results.base_scores.keys())
+        categories = self._measured_categories(results)
         if not categories:
             return "{}"
 
@@ -140,14 +257,20 @@ class ReportGenerator:
             showlegend=True,
             height=420,
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_retention_bars(self, results: EvalResults) -> str:
         if not results.forgetting:
             return "{}"
 
-        retention = results.forgetting.capability_retention_rates
+        retention = {
+            category: value
+            for category, value in results.forgetting.capability_retention_rates.items()
+            if value is not None
+        }
         cats = sorted(retention.keys(), key=lambda c: retention[c])
+        if not cats:
+            return "{}"
         values = [retention[c] for c in cats]
         colors = ["#10B981" if v >= 0.95 else "#F59E0B" if v >= 0.85 else "#EF4444" for v in values]
 
@@ -176,17 +299,17 @@ class ReportGenerator:
             yaxis=dict(title="", gridcolor="#F1F5F9"),
             height=max(260, len(cats) * 36 + 80),
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_target_bars(self, results: EvalResults) -> str:
-        categories = sorted(results.base_scores.keys())
+        categories = self._measured_categories(results)
         if not categories:
             return "{}"
 
         base_vals = [results.base_scores[c].mean_score for c in categories]
         ft_vals = [results.ft_scores[c].mean_score for c in categories]
-        base_err = [results.base_scores[c].std_score for c in categories]
-        ft_err = [results.ft_scores[c].std_score for c in categories]
+        base_err = [results.base_scores[c].std_score or 0.0 for c in categories]
+        ft_err = [results.ft_scores[c].std_score or 0.0 for c in categories]
 
         fig = go.Figure()
         fig.add_trace(
@@ -224,7 +347,7 @@ class ReportGenerator:
             legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
             height=380,
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     # ------------------------------------------------------------------
     # Deep analysis charts
@@ -272,7 +395,7 @@ class ReportGenerator:
             yaxis=dict(title="CKA Score", range=[0, 1.1], gridcolor="#F1F5F9"),
             height=360,
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_ppl_figure(self, ppl: PerplexityDistShift) -> str:
         fig = go.Figure()
@@ -323,7 +446,7 @@ class ReportGenerator:
             yanchor="top",
             align="right",
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_spectral_figure(self, spectral: SpectralReport) -> str:
         layers = list(spectral.per_layer_effective_rank.keys())
@@ -354,7 +477,7 @@ class ReportGenerator:
             yaxis=dict(title="Effective Rank", gridcolor="#F1F5F9"),
             height=360,
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_calibration_figure(self, cal: CalibrationReport) -> str:
         fig = go.Figure()
@@ -386,7 +509,7 @@ class ReportGenerator:
             if cal.per_bin_accuracy_ft:
                 fig.add_trace(
                     go.Scatter(
-                        x=cal.per_bin_confidence,
+                        x=cal.per_bin_confidence_ft or cal.per_bin_confidence,
                         y=cal.per_bin_accuracy_ft,
                         mode="lines+markers",
                         line=dict(color="#10B981", width=2),
@@ -403,7 +526,7 @@ class ReportGenerator:
             legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
             height=360,
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_activation_figure(self, act: ActivationDriftReport) -> str:
         layers = list(act.per_layer_cosine_sim.keys())
@@ -429,30 +552,43 @@ class ReportGenerator:
             yaxis=dict(title="Drift (1 - cosine sim)", gridcolor="#F1F5F9"),
             height=360,
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     def _build_roi_breakdown(self, results: EvalResults) -> str:
         """Stacked horizontal bar showing the 5 weighted ROI components."""
         if not results.forgetting:
             return "{}"
 
-        f = results.forgetting
-        crr_vals = list(f.capability_retention_rates.values())
-        mean_crr = sum(crr_vals) / len(crr_vals) if crr_vals else 0.0
-
-        components = {
-            "Target": max(0.0, min(1.0, results.target_improvement)) * 30,
-            "Retention": max(0.0, min(1.0, mean_crr)) * 25,
-            "Safety": (
-                max(0.0, min(1.0, f.safety_alignment_retention))
-                if f.safety_alignment_retention is not None
-                else 1.0
-            )
-            * 25,
-            "Selectivity": max(0.0, 1.0 - f.selective_forgetting_index) * 10,
-            "BWT": max(0.0, min(1.0, 1.0 + max(-1.0, f.backward_transfer))) * 10,
+        key_labels = {
+            "target": "Target",
+            "retention": "Retention",
+            "safety": "Safety",
+            "selectivity": "Selectivity",
+            "bwt": "BWT",
         }
-        max_points = {"Target": 30, "Retention": 25, "Safety": 25, "Selectivity": 10, "BWT": 10}
+        weights = results.roi_component_weights
+        values = results.roi_component_values
+        if not weights:
+            from finetunecheck.forgetting.metrics import compute_roi_details
+
+            rates = [
+                value
+                for value in results.forgetting.capability_retention_rates.values()
+                if value is not None
+            ]
+            details = compute_roi_details(
+                results.target_improvement,
+                results.forgetting.backward_transfer,
+                results.forgetting.safety_alignment_retention,
+                results.forgetting.selective_forgetting_index,
+                sum(rates) / len(rates) if rates else None,
+            )
+            weights = details["weights"]
+            values = details["values"]
+        components = {
+            key_labels[key]: weight * (values.get(key) or 0.0) for key, weight in weights.items()
+        }
+        max_points = {key_labels[key]: weight for key, weight in weights.items()}
         colors = {
             "Target": "#10B981",
             "Retention": "#6366F1",
@@ -480,7 +616,12 @@ class ReportGenerator:
         fig.update_layout(
             **_LAYOUT_DEFAULTS,
             title=dict(
-                text=f"ROI Score Breakdown — Total: {results.roi_score:.0f}/100",
+                text=(
+                    f"ROI Score Breakdown — Total: {results.roi_score:.0f}/100 "
+                    f"(coverage {results.roi_coverage:.0%})"
+                    if results.roi_score is not None
+                    else "ROI Score Breakdown — unavailable"
+                ),
                 font=dict(size=14),
             ),
             barmode="stack",
@@ -489,11 +630,20 @@ class ReportGenerator:
             height=180,
             legend=dict(orientation="h", yanchor="bottom", y=-0.55, xanchor="center", x=0.5),
         )
-        return fig.to_json()
+        return _figure_json(fig)
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _measured_categories(results: EvalResults) -> list[str]:
+        return [
+            category
+            for category in sorted(set(results.base_scores) & set(results.ft_scores))
+            if results.base_scores[category].mean_score is not None
+            and results.ft_scores[category].mean_score is not None
+        ]
 
     @staticmethod
     def _get_plotly_js_cdn() -> str:

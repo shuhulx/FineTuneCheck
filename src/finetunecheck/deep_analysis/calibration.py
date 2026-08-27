@@ -88,9 +88,10 @@ class CalibrationAnalyzer:
             shift_labels = input_ids[:, 1:]
             shift_mask = attention_mask[:, 1:]
 
-            # Per-token confidence = max softmax probability
-            probs = torch.softmax(shift_logits, dim=-1)
-            max_probs, predicted = probs.max(dim=-1)  # (batch, seq-1)
+            # Compute max-softmax confidence without materializing a full
+            # probability tensor the size of batch x sequence x vocabulary.
+            max_logits, predicted = shift_logits.max(dim=-1)
+            max_probs = torch.exp(max_logits - torch.logsumexp(shift_logits, dim=-1))
 
             # Per-token correctness
             correct = (predicted == shift_labels).float()
@@ -125,9 +126,7 @@ class CalibrationAnalyzer:
             (ece, per_bin_accuracy, per_bin_confidence, bin_edges)
         """
         if len(confidences) == 0:
-            empty = [0.0] * self.num_bins
-            edges = np.linspace(0, 1, self.num_bins + 1).tolist()
-            return 0.0, empty, empty, edges
+            raise ValueError("Calibration is unavailable because no scored tokens were produced")
 
         bin_boundaries = np.linspace(0, 1, self.num_bins + 1)
         ece = 0.0

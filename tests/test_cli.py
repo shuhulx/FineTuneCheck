@@ -26,12 +26,14 @@ class TestCLICommands:
         """Try to import CLI; skip all tests in class if not available."""
         try:
             from finetunecheck.cli import app
+
             self.app = app
         except (ImportError, ModuleNotFoundError):
             pytest.skip("finetunecheck.cli module not yet implemented")
 
     def _runner(self):
         from typer.testing import CliRunner
+
         return CliRunner()
 
     def test_cli_help(self):

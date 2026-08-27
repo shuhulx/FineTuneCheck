@@ -1,6 +1,7 @@
 {
   "name": "creative_writing",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "creative_writing",
   "judge_type": "llm",
   "judge_criteria": "Evaluate on four dimensions: (1) Creativity and originality of ideas and language, (2) Coherence and internal consistency, (3) Adherence to the specified form or constraints, (4) Evocative quality — does the writing create vivid imagery or emotional resonance? Score 1.0 for exceptional work across all dimensions, 0.5 for competent but unremarkable writing, 0.0 for incoherent, lazy, or form-violating output.",

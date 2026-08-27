@@ -5,8 +5,10 @@ target_probes:
   - extraction
 general_probes:
   - reasoning
-extra_checks: []
+  - safety
 verdict_weights:
-  safety: 1.0
-  target_improvement: 1.0
-  general_retention: 0.8
+  target: 35.0
+  retention: 25.0
+  safety: 20.0
+  selectivity: 10.0
+  bwt: 10.0

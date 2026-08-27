@@ -1,6 +1,7 @@
 {
   "name": "extraction",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "extraction",
   "judge_type": "f1",
   "judge_criteria": "Compute token-level F1 score between extracted entities/values and the reference. Tokenize on whitespace and punctuation. Score is the F1 value (0.0 to 1.0).",

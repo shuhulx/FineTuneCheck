@@ -1,4 +1,3 @@
-
 import numpy as np
 import pytest
 
@@ -68,11 +67,41 @@ def base_scores():
 def ft_scores_good():
     """Fine-tuned model scores -- good outcome (minimal forgetting)."""
     return {
-        "reasoning": CategoryScore(category="reasoning", mean_score=0.90, std_score=0.08, num_samples=20, sample_scores=[0.9] * 20),
-        "code": CategoryScore(category="code", mean_score=0.72, std_score=0.12, num_samples=20, sample_scores=[0.72] * 20),
-        "math": CategoryScore(category="math", mean_score=0.73, std_score=0.1, num_samples=20, sample_scores=[0.73] * 20),
-        "safety": CategoryScore(category="safety", mean_score=0.98, std_score=0.02, num_samples=20, sample_scores=[0.98] * 20),
-        "instruction_following": CategoryScore(category="instruction_following", mean_score=0.76, std_score=0.09, num_samples=20, sample_scores=[0.76] * 20),
+        "reasoning": CategoryScore(
+            category="reasoning",
+            mean_score=0.90,
+            std_score=0.08,
+            num_samples=20,
+            sample_scores=[0.9] * 20,
+        ),
+        "code": CategoryScore(
+            category="code",
+            mean_score=0.72,
+            std_score=0.12,
+            num_samples=20,
+            sample_scores=[0.72] * 20,
+        ),
+        "math": CategoryScore(
+            category="math",
+            mean_score=0.73,
+            std_score=0.1,
+            num_samples=20,
+            sample_scores=[0.73] * 20,
+        ),
+        "safety": CategoryScore(
+            category="safety",
+            mean_score=0.98,
+            std_score=0.02,
+            num_samples=20,
+            sample_scores=[0.98] * 20,
+        ),
+        "instruction_following": CategoryScore(
+            category="instruction_following",
+            mean_score=0.76,
+            std_score=0.09,
+            num_samples=20,
+            sample_scores=[0.76] * 20,
+        ),
     }
 
 
@@ -80,11 +109,41 @@ def ft_scores_good():
 def ft_scores_poor():
     """Fine-tuned model scores -- poor outcome (severe forgetting)."""
     return {
-        "reasoning": CategoryScore(category="reasoning", mean_score=0.85, std_score=0.1, num_samples=20, sample_scores=[0.85] * 20),
-        "code": CategoryScore(category="code", mean_score=0.40, std_score=0.15, num_samples=20, sample_scores=[0.40] * 20),
-        "math": CategoryScore(category="math", mean_score=0.35, std_score=0.12, num_samples=20, sample_scores=[0.35] * 20),
-        "safety": CategoryScore(category="safety", mean_score=0.60, std_score=0.2, num_samples=20, sample_scores=[0.60] * 20),
-        "instruction_following": CategoryScore(category="instruction_following", mean_score=0.50, std_score=0.15, num_samples=20, sample_scores=[0.50] * 20),
+        "reasoning": CategoryScore(
+            category="reasoning",
+            mean_score=0.85,
+            std_score=0.1,
+            num_samples=20,
+            sample_scores=[0.85] * 20,
+        ),
+        "code": CategoryScore(
+            category="code",
+            mean_score=0.40,
+            std_score=0.15,
+            num_samples=20,
+            sample_scores=[0.40] * 20,
+        ),
+        "math": CategoryScore(
+            category="math",
+            mean_score=0.35,
+            std_score=0.12,
+            num_samples=20,
+            sample_scores=[0.35] * 20,
+        ),
+        "safety": CategoryScore(
+            category="safety",
+            mean_score=0.60,
+            std_score=0.2,
+            num_samples=20,
+            sample_scores=[0.60] * 20,
+        ),
+        "instruction_following": CategoryScore(
+            category="instruction_following",
+            mean_score=0.50,
+            std_score=0.15,
+            num_samples=20,
+            sample_scores=[0.50] * 20,
+        ),
     }
 
 
@@ -100,7 +159,13 @@ def sample_eval_results(base_scores, ft_scores_good):
         target_improvement=0.20,
         forgetting=ForgettingReport(
             backward_transfer=-0.03,
-            capability_retention_rates={"reasoning": 1.20, "code": 0.96, "math": 0.97, "safety": 1.04, "instruction_following": 1.01},
+            capability_retention_rates={
+                "reasoning": 1.20,
+                "code": 0.96,
+                "math": 0.97,
+                "safety": 1.04,
+                "instruction_following": 1.01,
+            },
             selective_forgetting_index=0.08,
             safety_alignment_retention=1.04,
             pattern=ForgettingPattern.MINIMAL,

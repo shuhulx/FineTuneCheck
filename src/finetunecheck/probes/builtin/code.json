@@ -1,6 +1,7 @@
 {
   "name": "code",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "code",
   "judge_type": "execution",
   "judge_criteria": "Execute the generated Python code against the provided test cases. Score 1.0 if all test cases pass, partial credit proportional to fraction of passing tests.",
@@ -74,9 +75,9 @@
       "metadata": {
         "test_cases": [
           {"input": "c = lru_cache(2); c.put(1,1); c.put(2,2); c.get(1)", "output": "1"},
-          {"input": "c = lru_cache(2); c.put(1,1); c.put(2,2); c.put(3,3); c.get(2)", "output": "-1"},
+          {"input": "c = lru_cache(2); c.put(1,1); c.put(2,2); c.put(3,3); c.get(2)", "output": "2"},
           {"input": "c = lru_cache(1); c.put(1,1); c.put(2,2); c.get(1)", "output": "-1"},
-          {"input": "c = lru_cache(2); c.put(1,1); c.get(1); c.put(2,2); c.put(3,3); c.get(1)", "output": "1"}
+          {"input": "c = lru_cache(2); c.put(1,1); c.get(1); c.put(2,2); c.put(3,3); c.get(1)", "output": "-1"}
         ]
       }
     },

@@ -7,7 +7,7 @@ import traceback
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from finetunecheck.mcp.schemas import (
     COMPARE_RUNS_SCHEMA,
@@ -33,17 +33,17 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="evaluate_finetune",
             description=(
-                "Run comprehensive fine-tuning evaluation comparing a base model "
-                "against a fine-tuned model. Returns verdict, ROI score, category "
-                "scores, forgetting analysis, and recommendations."
+                "Run evidence-aware fine-tuning evaluation comparing a base model "
+                "against a fine-tuned model. Results support investigation and do "
+                "not independently approve deployment."
             ),
             inputSchema=EVALUATE_FINETUNE_SCHEMA,
         ),
         Tool(
             name="quick_check",
             description=(
-                "Fast 5-minute evaluation on 4 core capabilities (reasoning, code, "
-                "math, safety) with 20 samples each. Use for rapid iteration."
+                "Offline deterministic smoke evaluation on math, classification, "
+                "instruction constraints, and refusal/over-refusal controls."
             ),
             inputSchema=QUICK_CHECK_SCHEMA,
         ),
@@ -68,8 +68,8 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="get_verdict",
             description=(
-                "Get a quick deployment readiness assessment: EXCELLENT, GOOD, "
-                "GOOD_WITH_CONCERNS, POOR, or HARMFUL."
+                "Get a quick evidence verdict, including INSUFFICIENT_EVIDENCE when "
+                "required measurements are absent or statistically small."
             ),
             inputSchema=GET_VERDICT_SCHEMA,
         ),
@@ -106,17 +106,26 @@ async def list_tools() -> list[Tool]:
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+async def call_tool(name: str, arguments: dict) -> CallToolResult:
     handler = TOOL_HANDLERS.get(name)
     if handler is None:
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"Unknown tool: {name}")],
+            isError=True,
+        )
 
     try:
         result = await handler(arguments)
-        return [TextContent(type="text", text=result)]
+        return CallToolResult(
+            content=[TextContent(type="text", text=result)],
+            isError=False,
+        )
     except Exception as exc:
         logger.error("Error running %s: %s\n%s", name, exc, traceback.format_exc())
-        return [TextContent(type="text", text=f"Error running {name}: {exc}")]
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"Error running {name}: {exc}")],
+            isError=True,
+        )
 
 
 async def main() -> None:

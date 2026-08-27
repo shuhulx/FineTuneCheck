@@ -1,1 +1,3 @@
-__version__ = "0.2.2"
+"""The single source of truth for the FineTuneCheck release version."""
+
+__version__ = "2.0.0"

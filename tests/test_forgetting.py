@@ -13,7 +13,9 @@ from finetunecheck.models import CategoryScore, ForgettingPattern
 def _make_scores(values: dict[str, float]) -> dict[str, CategoryScore]:
     """Helper: build CategoryScore dict from {category: mean_score}."""
     return {
-        cat: CategoryScore(category=cat, mean_score=score, num_samples=10, sample_scores=[score] * 10)
+        cat: CategoryScore(
+            category=cat, mean_score=score, num_samples=10, sample_scores=[score] * 10
+        )
         for cat, score in values.items()
     }
 
@@ -51,17 +53,16 @@ class TestBackwardTransfer:
         assert abs(bwt) < 1e-9
 
     def test_backward_transfer_missing_ft_category(self):
-        """When ft is missing a category, BWT should treat it as -1.0 (total loss)."""
+        """Missing categories are omitted from BWT and surfaced separately."""
         base = _make_scores({"code": 0.8, "math": 0.7})
         ft = _make_scores({"code": 0.8})  # math missing
         bwt = backward_transfer(base, ft)
-        # code delta = 0, math delta = -1.0 (normalized total loss)
-        assert abs(bwt - (-0.5)) < 1e-9
+        assert bwt == 0.0
 
     def test_backward_transfer_empty(self):
-        """BWT of empty scores should be 0."""
+        """BWT of empty scores is unavailable."""
         bwt = backward_transfer({}, {})
-        assert bwt == 0.0
+        assert bwt is None
 
 
 class TestCapabilityRetentionRate:
@@ -78,10 +79,8 @@ class TestCapabilityRetentionRate:
         base = _make_scores({"code": 0.0, "math": 0.0})
         ft = _make_scores({"code": 0.0, "math": 0.5})
         rates = capability_retention_rate(base, ft)
-        # 0/0 -> 1.0 (both zero = full retention)
-        assert rates["code"] == 1.0
-        # base=0, ft nonzero -> return ft score directly (mirrors SAR zero-base semantics)
-        assert rates["math"] == 0.5
+        assert rates["code"] is None
+        assert rates["math"] is None
 
     def test_crr_excludes_target(self):
         """CRR should exclude the target category."""
@@ -92,11 +91,11 @@ class TestCapabilityRetentionRate:
         assert "code" in rates
 
     def test_crr_missing_ft_category(self):
-        """Missing ft category should result in 0.0 retention."""
+        """Missing ft category should result in undefined retention."""
         base = _make_scores({"code": 0.8, "math": 0.7})
         ft = _make_scores({"code": 0.8})
         rates = capability_retention_rate(base, ft)
-        assert rates["math"] == 0.0
+        assert rates["math"] is None
 
     def test_crr_improvement(self):
         """CRR > 1.0 when ft improved over base."""
@@ -155,11 +154,11 @@ class TestSafetyAlignmentRetention:
         assert sar is None
 
     def test_safety_alignment_retention_zero_base(self):
-        """SAR should return ft score when base safety is zero."""
+        """SAR is undefined when base safety is zero."""
         base = _make_scores({"safety": 0.0})
         ft = _make_scores({"safety": 0.5})
         sar = safety_alignment_retention(base, ft)
-        assert sar == 0.5
+        assert sar is None
 
     def test_safety_alignment_retained(self):
         """SAR should be 1.0 when safety score is unchanged."""
@@ -216,12 +215,10 @@ class TestROIScore:
         assert 0 <= roi <= 100
 
     def test_roi_score_no_forgetting_report(self):
-        """ROI with None forgetting report should use defaults (retention=1, safety=1)."""
+        """ROI with missing evidence awards no retention or safety points."""
         roi = Scorer.compute_roi(0.5, None)
         assert 0 <= roi <= 100
-        # With improvement=0.5 capped at 1.0, full retention and safety
-        # Should be high
-        assert roi > 50
+        assert roi == 30.0
 
     def test_roi_score_zero_improvement(self):
         """ROI should reflect retention/safety even with zero improvement."""
@@ -258,7 +255,8 @@ class TestScorerCompute:
         """Scorer should handle empty verdict list."""
         cat_score = Scorer.compute_category_scores([], "empty")
         assert cat_score.category == "empty"
-        assert cat_score.mean_score == 0.0
+        assert cat_score.mean_score is None
+        assert cat_score.status.value == "NOT_RUN"
         assert cat_score.num_samples == 0
 
     def test_scorer_single_verdict(self):
@@ -272,11 +270,11 @@ class TestScorerCompute:
         assert cat_score.num_samples == 1
 
     def test_target_improvement_positive(self):
-        """Relative improvement should be positive when ft > base."""
+        """Target improvement is an absolute bounded-score delta."""
         base = CategoryScore(category="r", mean_score=0.5, num_samples=10)
         ft = CategoryScore(category="r", mean_score=0.7, num_samples=10)
         improvement = Scorer.compute_target_improvement(base, ft)
-        assert abs(improvement - 0.4) < 1e-9  # (0.7-0.5)/0.5
+        assert abs(improvement - 0.2) < 1e-9
 
     def test_target_improvement_zero_base(self):
         """When base is 0, improvement should return ft score directly."""

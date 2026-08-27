@@ -1,6 +1,7 @@
 {
   "name": "math",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "math",
   "judge_type": "exact_match",
   "judge_criteria": "Compare the final numeric answer with the reference. Strip whitespace, units, and trailing zeros. Score 1.0 for exact match, 0.0 otherwise.",

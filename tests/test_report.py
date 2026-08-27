@@ -47,7 +47,9 @@ class TestHTMLReportGeneration:
         # Should contain plotly.js reference
         assert "plotly" in content.lower()
 
-    def test_html_report_with_deep_analysis(self, sample_eval_results, sample_deep_analysis, tmp_path):
+    def test_html_report_with_deep_analysis(
+        self, sample_eval_results, sample_deep_analysis, tmp_path
+    ):
         """Report should include deep analysis section when provided."""
         sample_eval_results.deep_analysis = sample_deep_analysis
         output = tmp_path / "report_deep.html"
@@ -125,20 +127,25 @@ class TestReportExport:
     def test_csv_export(self, sample_eval_results, tmp_path):
         """Should export valid CSV of category scores."""
         import csv
+
         output = tmp_path / "results.csv"
         rows = []
         for cat, score in sample_eval_results.base_scores.items():
             ft_score = sample_eval_results.ft_scores.get(cat)
-            rows.append({
-                "category": cat,
-                "base_mean": score.mean_score,
-                "ft_mean": ft_score.mean_score if ft_score else None,
-                "base_std": score.std_score,
-                "ft_std": ft_score.std_score if ft_score else None,
-            })
+            rows.append(
+                {
+                    "category": cat,
+                    "base_mean": score.mean_score,
+                    "ft_mean": ft_score.mean_score if ft_score else None,
+                    "base_std": score.std_score,
+                    "ft_std": ft_score.std_score if ft_score else None,
+                }
+            )
 
         with output.open("w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["category", "base_mean", "ft_mean", "base_std", "ft_std"])
+            writer = csv.DictWriter(
+                f, fieldnames=["category", "base_mean", "ft_mean", "base_std", "ft_std"]
+            )
             writer.writeheader()
             writer.writerows(rows)
 
@@ -186,6 +193,7 @@ class TestReportExport:
 # ---------------------------------------------------------------------------
 # _build_roi_breakdown
 # ---------------------------------------------------------------------------
+
 
 class TestBuildROIBreakdown:
     def test_returns_valid_json(self, sample_eval_results):
@@ -255,8 +263,8 @@ class TestBuildROIBreakdown:
         title_text = parsed["layout"]["title"]["text"]
         assert "78" in title_text  # roi_score=78.0
 
-    def test_safety_defaults_to_full_when_none(self, base_scores, ft_scores_good):
-        """When safety_alignment_retention is None, Safety component should use 1.0."""
+    def test_missing_safety_gets_zero_points(self, base_scores, ft_scores_good):
+        """Missing safety evidence must not be rendered as perfect."""
         results = EvalResults(
             base_model="base",
             finetuned_model="ft",
@@ -276,12 +284,13 @@ class TestBuildROIBreakdown:
         gen = ReportGenerator()
         parsed = json.loads(gen._build_roi_breakdown(results))
         safety_trace = next(t for t in parsed["data"] if t["name"].startswith("Safety"))
-        assert safety_trace["x"][0] == pytest.approx(25.0)
+        assert safety_trace["x"][0] == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------
 # _build_target_bars — error bars
 # ---------------------------------------------------------------------------
+
 
 class TestBuildTargetBarsErrorBars:
     def test_error_bars_present_on_both_traces(self, sample_eval_results):
@@ -331,6 +340,7 @@ class TestBuildTargetBarsErrorBars:
 # ---------------------------------------------------------------------------
 # _build_ppl_figure — Wasserstein annotation
 # ---------------------------------------------------------------------------
+
 
 class TestBuildPPLFigureAnnotation:
     def test_annotation_present_in_figure(self, sample_deep_analysis):
@@ -407,7 +417,9 @@ class TestHTMLReportNewFeatures:
         content = output.read_text()
         assert "error_y" in content
 
-    def test_wasserstein_in_deep_analysis_report(self, sample_eval_results, sample_deep_analysis, tmp_path):
+    def test_wasserstein_in_deep_analysis_report(
+        self, sample_eval_results, sample_deep_analysis, tmp_path
+    ):
         sample_eval_results.deep_analysis = sample_deep_analysis
         output = tmp_path / "report.html"
         gen = ReportGenerator()
@@ -415,7 +427,9 @@ class TestHTMLReportNewFeatures:
         content = output.read_text()
         assert "Wasserstein" in content
 
-    def test_ppl_annotation_value_in_report(self, sample_eval_results, sample_deep_analysis, tmp_path):
+    def test_ppl_annotation_value_in_report(
+        self, sample_eval_results, sample_deep_analysis, tmp_path
+    ):
         sample_eval_results.deep_analysis = sample_deep_analysis
         output = tmp_path / "report.html"
         gen = ReportGenerator()

@@ -101,7 +101,7 @@ class CKAAnalyzer:
             attention_mask = encodings["attention_mask"].to(device)
 
             # Use AnalysisModel's hook-based hidden state collection
-            hidden_states = model.get_hidden_states(input_ids)
+            hidden_states = model.get_hidden_states(input_ids, attention_mask=attention_mask)
 
             # Mean-pool over sequence length (respecting attention mask)
             mask_expanded = attention_mask.unsqueeze(-1).float()  # (batch, seq, 1)
@@ -166,8 +166,7 @@ class CKAAnalyzer:
             per_layer_cka[f"layer_{layer_idx}"] = cka_score
 
         if not per_layer_cka:
-            logger.warning("No common layers found between models for CKA analysis.")
-            return CKAReport(per_layer_cka={}, most_diverged_layers=[], mean_cka=0.0)
+            raise ValueError("No compatible hidden-state layers were available for CKA")
 
         sorted_layers = sorted(per_layer_cka.items(), key=lambda x: x[1])
         most_diverged = [name for name, score in sorted_layers[:5] if score < 0.9]

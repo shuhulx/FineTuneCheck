@@ -1,208 +1,139 @@
-"""JSON Schema definitions for MCP tool inputs."""
+"""Strict JSON Schemas for the supported MCP SDK 1.x API."""
 
 from __future__ import annotations
 
-EVALUATE_FINETUNE_SCHEMA = {
+_NON_EMPTY_STRING = {"type": "string", "minLength": 1}
+_DEVICE = {"type": "string", "enum": ["auto", "cpu", "cuda", "mps"], "default": "auto"}
+_POSITIVE_SAMPLES = {"type": "integer", "minimum": 1}
+_JUDGE = {
     "type": "object",
     "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
-        },
-        "finetuned_model": {
-            "type": "string",
-            "description": "Fine-tuned model path or HuggingFace ID",
-        },
-        "target_task": {
-            "type": "string",
-            "description": "Target task name (optional)",
-        },
-        "num_samples": {
-            "type": "integer",
-            "description": "Number of samples per probe (default: 100)",
-            "default": 100,
-        },
-        "deep_analysis": {
-            "type": "boolean",
-            "description": "Enable deep analysis (CKA, spectral, etc.)",
-            "default": False,
-        },
-        "device": {
-            "type": "string",
-            "description": "Device: auto, cpu, cuda, mps",
-            "default": "auto",
-        },
-        "profile": {
-            "type": "string",
-            "description": "Evaluation profile (e.g. code, chat, safety)",
-        },
+        "provider": {"type": "string", "enum": ["local", "openai", "anthropic"]},
+        "model": _NON_EMPTY_STRING,
+        "api_key_env": _NON_EMPTY_STRING,
+        "temperature": {"type": "number", "minimum": 0, "maximum": 2, "default": 0},
+        "max_tokens": {"type": "integer", "minimum": 1, "default": 256},
+        "settings": {"type": "object", "additionalProperties": True},
     },
-    "required": ["base_model", "finetuned_model"],
+    "required": ["provider", "model"],
+    "additionalProperties": False,
 }
 
-QUICK_CHECK_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
-        },
-        "finetuned_model": {
-            "type": "string",
-            "description": "Fine-tuned model path or HuggingFace ID",
-        },
-        "device": {
-            "type": "string",
-            "description": "Device: auto, cpu, cuda, mps",
-            "default": "auto",
-        },
+
+def _object(properties: dict, required: list[str] | None = None) -> dict:
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": required or [],
+        "additionalProperties": False,
+    }
+
+
+_PAIRED_PROPERTIES = {
+    "base_model": {**_NON_EMPTY_STRING, "description": "Base model path or ID"},
+    "finetuned_model": {**_NON_EMPTY_STRING, "description": "Fine-tuned model path or ID"},
+    "target_tasks": {
+        "type": "array",
+        "items": _NON_EMPTY_STRING,
+        "uniqueItems": True,
+        "description": "Canonical target probe categories",
     },
-    "required": ["base_model", "finetuned_model"],
+    "target_task": {
+        **_NON_EMPTY_STRING,
+        "deprecated": True,
+        "description": "Deprecated single-target compatibility alias",
+    },
+    "num_samples": {**_POSITIVE_SAMPLES, "default": 100},
+    "device": _DEVICE,
+    "judge": _JUDGE,
 }
 
-DETECT_FORGETTING_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
-        },
-        "finetuned_model": {
-            "type": "string",
-            "description": "Fine-tuned model path or HuggingFace ID",
-        },
-        "num_samples": {
-            "type": "integer",
-            "description": "Number of samples per probe",
-            "default": 100,
-        },
-        "device": {
-            "type": "string",
-            "default": "auto",
-        },
+EVALUATE_FINETUNE_SCHEMA = _object(
+    {
+        **_PAIRED_PROPERTIES,
+        "deep_analysis": {"type": "boolean", "default": False},
+        "deep_analysis_samples": {**_POSITIVE_SAMPLES, "default": 50},
+        "profile": _NON_EMPTY_STRING,
     },
-    "required": ["base_model", "finetuned_model"],
-}
+    ["base_model", "finetuned_model"],
+)
 
-COMPARE_RUNS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
+QUICK_CHECK_SCHEMA = _object(
+    {
+        "base_model": _NON_EMPTY_STRING,
+        "finetuned_model": _NON_EMPTY_STRING,
+        "target_tasks": {
+            "type": "array",
+            "items": _NON_EMPTY_STRING,
+            "uniqueItems": True,
         },
+        "device": _DEVICE,
+    },
+    ["base_model", "finetuned_model"],
+)
+
+DETECT_FORGETTING_SCHEMA = _object(_PAIRED_PROPERTIES, ["base_model", "finetuned_model"])
+
+COMPARE_RUNS_SCHEMA = _object(
+    {
+        "base_model": _NON_EMPTY_STRING,
         "finetuned_models": {
             "type": "object",
-            "description": "Mapping of run name to model path/ID",
-            "additionalProperties": {"type": "string"},
+            "minProperties": 1,
+            "additionalProperties": _NON_EMPTY_STRING,
         },
-        "target_task": {
-            "type": "string",
-            "description": "Target task name (optional)",
+        "target_tasks": {
+            "type": "array",
+            "items": _NON_EMPTY_STRING,
+            "uniqueItems": True,
         },
-        "num_samples": {
-            "type": "integer",
-            "default": 100,
-        },
-        "device": {
-            "type": "string",
-            "default": "auto",
-        },
+        "target_task": {**_NON_EMPTY_STRING, "deprecated": True},
+        "num_samples": {**_POSITIVE_SAMPLES, "default": 100},
+        "device": _DEVICE,
+        "judge": _JUDGE,
     },
-    "required": ["base_model", "finetuned_models"],
-}
+    ["base_model", "finetuned_models"],
+)
 
-GET_VERDICT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
+GET_VERDICT_SCHEMA = _object(
+    {
+        "base_model": _NON_EMPTY_STRING,
+        "finetuned_model": _NON_EMPTY_STRING,
+        "target_tasks": {
+            "type": "array",
+            "items": _NON_EMPTY_STRING,
+            "uniqueItems": True,
         },
-        "finetuned_model": {
-            "type": "string",
-            "description": "Fine-tuned model path or HuggingFace ID",
-        },
-        "device": {
-            "type": "string",
-            "default": "auto",
-        },
+        "device": _DEVICE,
     },
-    "required": ["base_model", "finetuned_model"],
-}
+    ["base_model", "finetuned_model"],
+)
 
-SUGGEST_FIXES_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
-        },
-        "finetuned_model": {
-            "type": "string",
-            "description": "Fine-tuned model path or HuggingFace ID",
-        },
-        "device": {
-            "type": "string",
-            "default": "auto",
-        },
-    },
-    "required": ["base_model", "finetuned_model"],
-}
+SUGGEST_FIXES_SCHEMA = EVALUATE_FINETUNE_SCHEMA
 
-GENERATE_REPORT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "base_model": {
-            "type": "string",
-            "description": "Base model path or HuggingFace ID",
-        },
-        "finetuned_model": {
-            "type": "string",
-            "description": "Fine-tuned model path or HuggingFace ID",
-        },
-        "output_path": {
-            "type": "string",
-            "description": "Output file path for the report",
-        },
+GENERATE_REPORT_SCHEMA = _object(
+    {
+        **_PAIRED_PROPERTIES,
+        "output_path": _NON_EMPTY_STRING,
         "format": {
             "type": "string",
-            "description": "Report format: html, json, csv, markdown",
-            "default": "html",
             "enum": ["html", "json", "csv", "markdown"],
+            "default": "html",
         },
-        "device": {
-            "type": "string",
-            "default": "auto",
-        },
+        "overwrite": {"type": "boolean", "default": False},
     },
-    "required": ["base_model", "finetuned_model", "output_path"],
-}
+    ["base_model", "finetuned_model", "output_path"],
+)
 
-LIST_PROFILES_SCHEMA = {
-    "type": "object",
-    "properties": {},
-}
+LIST_PROFILES_SCHEMA = _object({})
 
-RUN_PROBE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "model": {
-            "type": "string",
-            "description": "Model path or HuggingFace ID to probe",
-        },
-        "probe_name": {
-            "type": "string",
-            "description": "Name of the probe set to run",
-        },
-        "num_samples": {
-            "type": "integer",
-            "description": "Max samples to run (default: all)",
-        },
-        "device": {
-            "type": "string",
-            "default": "auto",
-        },
+RUN_PROBE_SCHEMA = _object(
+    {
+        "model": _NON_EMPTY_STRING,
+        "probe_name": _NON_EMPTY_STRING,
+        "num_samples": _POSITIVE_SAMPLES,
+        "device": _DEVICE,
+        "judge": _JUDGE,
     },
-    "required": ["model", "probe_name"],
-}
+    ["model", "probe_name"],
+)

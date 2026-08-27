@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal, cast
+
 import typer
 from rich.console import Console
 
@@ -42,10 +44,20 @@ def main_callback(
 # ---------------------------------------------------------------------------
 
 
-def _resolve_device(device: str) -> str:
-    from finetunecheck.utils.device import detect_device
+DeviceChoice = Literal["auto", "cpu", "cuda", "mps"]
+OutputFormat = Literal["html", "json", "csv", "markdown"]
 
-    return detect_device(device)
+
+def _resolve_device(device: str) -> DeviceChoice:
+    if device not in {"auto", "cpu", "cuda", "mps"}:
+        raise typer.BadParameter("device must be one of: auto, cpu, cuda, mps")
+    return cast(DeviceChoice, device)
+
+
+def _resolve_output_format(output_format: str) -> OutputFormat:
+    if output_format not in {"html", "json", "csv", "markdown"}:
+        raise typer.BadParameter("format must be one of: html, json, csv, markdown")
+    return cast(OutputFormat, output_format)
 
 
 def _generate_report(results, output: str, fmt: str) -> str:
@@ -89,7 +101,8 @@ def _print_results(results) -> None:
         f = results.forgetting
         console.print()
         console.print(f"[bold]Forgetting pattern:[/bold] {f.pattern.value}")
-        console.print(f"[bold]Backward transfer:[/bold] {f.backward_transfer:+.3f}")
+        bwt = f"{f.backward_transfer:+.3f}" if f.backward_transfer is not None else "unavailable"
+        console.print(f"[bold]Backward transfer:[/bold] {bwt}")
         if f.most_affected:
             console.print(f"[bold]Most affected:[/bold] [red]{', '.join(f.most_affected)}[/red]")
         if f.resilient:
@@ -109,6 +122,9 @@ def run(
     base_model: str = typer.Argument(..., help="Base model path or HuggingFace ID"),
     finetuned_model: str = typer.Argument(..., help="Fine-tuned model path or HuggingFace ID"),
     target_task: str | None = typer.Option(None, "--target-task", "-t", help="Target task name"),
+    target: list[str] | None = typer.Option(
+        None, "--target", help="Target probe category; repeat for multiple targets"
+    ),
     profile: str | None = typer.Option(
         None,
         "--profile",
@@ -117,16 +133,26 @@ def run(
     ),
     num_samples: int = typer.Option(100, "--num-samples", "-n", help="Samples per probe"),
     deep: bool = typer.Option(False, "--deep", help="Enable deep analysis (CKA, spectral, etc.)"),
+    deep_samples: int = typer.Option(
+        50,
+        "--deep-samples",
+        min=1,
+        help="Experimental deep-analysis text count (bundled corpus: 50)",
+    ),
     report: str | None = typer.Option(None, "--report", "-r", help="Output report path"),
     output_format: str = typer.Option(
         "html", "--format", "-f", help="Report format: html, json, csv, markdown"
     ),
     device: str = typer.Option("auto", "--device", help="Device: auto, cpu, cuda, mps"),
-    judge: str = typer.Option("auto", "--judge", help="Judge model or 'auto'"),
+    judge: str = typer.Option(
+        "auto",
+        "--judge",
+        help="Dedicated judge: openai:<model>, anthropic:<model>, or local:<model>",
+    ),
     exit_code: bool = typer.Option(
         False,
         "--exit-code",
-        help="Return non-zero exit code for POOR/HARMFUL verdicts",
+        help="Return non-zero for POOR, HARMFUL, or INSUFFICIENT_EVIDENCE",
     ),
     cache: bool = typer.Option(True, "--cache/--no-cache", help="Cache baseline results"),
 ) -> None:
@@ -142,13 +168,14 @@ def run(
     config = EvalConfig(
         base_model=base_model,
         finetuned_model=finetuned_model,
-        target_task=target_task,
+        target_tasks=target or ([target_task] if target_task else []),
         num_samples=num_samples,
         deep_analysis=deep,
+        deep_analysis_samples=deep_samples,
         device=_resolve_device(device),
         judge_model=judge,
         cache_baseline=cache,
-        output_format=output_format,
+        output_format=_resolve_output_format(output_format),
     )
 
     if profile:
@@ -166,7 +193,11 @@ def run(
         path = _generate_report(results, report, output_format)
         console.print(f"\n[bold green]Report saved:[/bold green] {path}")
 
-    if exit_code and results.verdict in (Verdict.POOR, Verdict.HARMFUL):
+    if exit_code and results.verdict in (
+        Verdict.POOR,
+        Verdict.HARMFUL,
+        Verdict.INSUFFICIENT_EVIDENCE,
+    ):
         raise typer.Exit(1)
 
 
@@ -177,7 +208,7 @@ def quick(
     report: str | None = typer.Option(None, "--report", "-r", help="Output report path"),
     device: str = typer.Option("auto", "--device", help="Device: auto, cpu, cuda, mps"),
 ) -> None:
-    """Quick 5-minute evaluation on core capabilities (20 samples, 4 categories)."""
+    """Offline deterministic smoke evaluation on four lightweight categories."""
     from finetunecheck.config import QuickConfig
     from finetunecheck.eval.runner import EvalRunner
 
@@ -205,6 +236,15 @@ def compare(
         ..., help="Fine-tuned model paths (space-separated)"
     ),
     target_task: str | None = typer.Option(None, "--target-task", "-t", help="Target task name"),
+    target: list[str] | None = typer.Option(
+        None, "--target", help="Target probe category; repeat for multiple targets"
+    ),
+    profile: str | None = typer.Option(None, "--profile", "-p", help="Evaluation profile"),
+    judge: str = typer.Option(
+        "auto",
+        "--judge",
+        help="Dedicated judge: openai:<model>, anthropic:<model>, or local:<model>",
+    ),
     report: str | None = typer.Option(None, "--report", "-r", help="Output report path"),
     device: str = typer.Option("auto", "--device", help="Device"),
     num_samples: int = typer.Option(100, "--num-samples", "-n", help="Samples per probe"),
@@ -221,11 +261,16 @@ def compare(
 
     config = EvalConfig(
         base_model=base_model,
-        finetuned_model="",  # overridden per run
-        target_task=target_task,
+        finetuned_model="placeholder",  # overridden per run
+        target_tasks=target or ([target_task] if target_task else []),
         num_samples=num_samples,
         device=_resolve_device(device),
+        judge_model=judge,
     )
+    if profile:
+        from finetunecheck.profiles.loader import ProfileLoader
+
+        config = ProfileLoader.apply_to_config(profile, config)
 
     with console.status(f"[bold cyan]Comparing {len(ft_map)} runs...[/bold cyan]", spinner="dots"):
         comparator = MultiRunComparator()
@@ -246,8 +291,9 @@ def compare(
     console.print(f"[italic]{result.recommendation}[/italic]")
 
     if report:
-        best = result.runs[result.best_run]
-        path = _generate_report(best, report, "html")
+        from finetunecheck.report.generator import ReportGenerator
+
+        path = ReportGenerator().generate_comparison(result, report)
         console.print(f"\n[bold green]Report saved:[/bold green] {path}")
 
 

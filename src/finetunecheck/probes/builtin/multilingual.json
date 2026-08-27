@@ -1,6 +1,7 @@
 {
   "name": "multilingual",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "multilingual",
   "judge_type": "llm",
   "judge_criteria": "Evaluate whether the response correctly answers the question in the appropriate language. Score 1.0 for correct and well-formed response in the target language, 0.5 for correct content but wrong language or grammatical issues, 0.0 for incorrect content.",

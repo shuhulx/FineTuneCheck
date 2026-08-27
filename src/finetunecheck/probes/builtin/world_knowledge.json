@@ -1,6 +1,7 @@
 {
   "name": "world_knowledge",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "world_knowledge",
   "judge_type": "exact_match",
   "judge_criteria": "Compare the answer against the reference, ignoring case and minor formatting differences. Score 1.0 for correct, 0.0 for incorrect.",

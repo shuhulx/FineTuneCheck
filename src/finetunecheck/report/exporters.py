@@ -32,20 +32,30 @@ class CSVExporter:
         buf = io.StringIO()
         writer = csv.writer(buf)
 
-        has_forgetting = results.forgetting is not None
-        header = ["category", "base_score", "ft_score", "change"]
+        forgetting = results.forgetting
+        has_forgetting = forgetting is not None
+        header = ["category", "base_status", "base_score", "ft_status", "ft_score", "change"]
         if has_forgetting:
             header.append("retention_rate")
         writer.writerow(header)
 
-        for cat in sorted(results.base_scores.keys()):
-            bs = results.base_scores[cat].mean_score
+        for cat in sorted(set(results.base_scores) | set(results.ft_scores)):
+            base_cat = results.base_scores.get(cat)
+            bs = base_cat.mean_score if base_cat else None
             ft_cat = results.ft_scores.get(cat)
-            fs = ft_cat.mean_score if ft_cat else 0.0
-            row = [cat, f"{bs:.4f}", f"{fs:.4f}", f"{fs - bs:+.4f}"]
-            if has_forgetting:
-                ret = results.forgetting.capability_retention_rates.get(cat, 1.0)
-                row.append(f"{ret:.4f}")
+            fs = ft_cat.mean_score if ft_cat else None
+            delta = fs - bs if fs is not None and bs is not None else None
+            row = [
+                cat,
+                base_cat.status.value if base_cat else "MISSING",
+                f"{bs:.4f}" if bs is not None else "",
+                ft_cat.status.value if ft_cat else "MISSING",
+                f"{fs:.4f}" if fs is not None else "",
+                f"{delta:+.4f}" if delta is not None else "",
+            ]
+            if forgetting is not None:
+                ret = forgetting.capability_retention_rates.get(cat)
+                row.append(f"{ret:.4f}" if ret is not None else "")
             writer.writerow(row)
 
         out.write_text(buf.getvalue(), encoding="utf-8")
@@ -65,13 +75,23 @@ class MarkdownExporter:
 
         lines.append("# FineTuneCheck Report")
         lines.append("")
-        lines.append(f"**Verdict:** {verdict_label} (ROI: {results.roi_score:.0f}/100)")
+        roi_text = (
+            f"{results.roi_score:.0f}/100" if results.roi_score is not None else "unavailable"
+        )
+        lines.append(
+            f"**Verdict:** {verdict_label} (ROI: {roi_text}; evidence coverage: {results.roi_coverage:.0%})"
+        )
         lines.append("")
         lines.append(f"- **Base model:** `{results.base_model}`")
         lines.append(f"- **Fine-tuned model:** `{results.finetuned_model}`")
-        if results.target_task:
-            lines.append(f"- **Target task:** `{results.target_task}`")
-        lines.append(f"- **Target improvement:** {results.target_improvement:+.1%}")
+        if results.target_tasks:
+            lines.append(f"- **Target tasks:** `{', '.join(results.target_tasks)}`")
+        target_text = (
+            f"{results.target_improvement:+.3f} absolute score"
+            if results.target_improvement is not None
+            else "unavailable"
+        )
+        lines.append(f"- **Target improvement:** {target_text}")
         lines.append("")
 
         # Summary
@@ -85,7 +105,8 @@ class MarkdownExporter:
         lines.append("## Category Scores")
         lines.append("")
 
-        has_forgetting = results.forgetting is not None
+        forgetting = results.forgetting
+        has_forgetting = forgetting is not None
         if has_forgetting:
             lines.append("| Category | Base | Fine-tuned | Change | Retention |")
             lines.append("|----------|------|-----------|--------|-----------|")
@@ -93,15 +114,23 @@ class MarkdownExporter:
             lines.append("| Category | Base | Fine-tuned | Change |")
             lines.append("|----------|------|-----------|--------|")
 
-        for cat in sorted(results.base_scores.keys()):
-            bs = results.base_scores[cat].mean_score
+        for cat in sorted(set(results.base_scores) | set(results.ft_scores)):
+            base_cat = results.base_scores.get(cat)
+            bs = base_cat.mean_score if base_cat else None
             ft_cat = results.ft_scores.get(cat)
-            fs = ft_cat.mean_score if ft_cat else 0.0
-            delta = fs - bs
-            row = f"| {cat} | {bs:.3f} | {fs:.3f} | {delta:+.3f} |"
-            if has_forgetting:
-                ret = results.forgetting.capability_retention_rates.get(cat, 1.0)
-                row += f" {ret:.1%} |"
+            fs = ft_cat.mean_score if ft_cat else None
+            delta = fs - bs if fs is not None and bs is not None else None
+            base_text = (
+                f"{bs:.3f}" if bs is not None else base_cat.status.value if base_cat else "MISSING"
+            )
+            ft_text = (
+                f"{fs:.3f}" if fs is not None else ft_cat.status.value if ft_cat else "MISSING"
+            )
+            delta_text = f"{delta:+.3f}" if delta is not None else "Unavailable"
+            row = f"| {cat} | {base_text} | {ft_text} | {delta_text} |"
+            if forgetting is not None:
+                ret = forgetting.capability_retention_rates.get(cat)
+                row += f" {ret:.1%} |" if ret is not None else " Unavailable |"
             lines.append(row)
         lines.append("")
 
@@ -111,8 +140,16 @@ class MarkdownExporter:
             lines.append("## Forgetting Analysis")
             lines.append("")
             lines.append(f"- **Pattern:** {f.pattern.value}")
-            lines.append(f"- **Backward transfer:** {f.backward_transfer:.3f}")
-            lines.append(f"- **Selective forgetting index:** {f.selective_forgetting_index:.3f}")
+            bwt_text = (
+                f"{f.backward_transfer:.3f}" if f.backward_transfer is not None else "unavailable"
+            )
+            sfi_text = (
+                f"{f.selective_forgetting_index:.3f}"
+                if f.selective_forgetting_index is not None
+                else "unavailable"
+            )
+            lines.append(f"- **Backward transfer:** {bwt_text}")
+            lines.append(f"- **Selective forgetting index:** {sfi_text}")
             if f.safety_alignment_retention is not None:
                 lines.append(f"- **Safety retention:** {f.safety_alignment_retention:.1%}")
             if f.most_affected:
@@ -185,7 +222,9 @@ class MarkdownExporter:
             lines.append("")
 
         lines.append("---")
-        lines.append(f"*Generated by FineTuneCheck v{__version__}*")
+        lines.append(
+            f"*Generated by FineTuneCheck v{__version__}; diagnostic evidence, not deployment approval.*"
+        )
         lines.append("")
 
         out.write_text("\n".join(lines), encoding="utf-8")

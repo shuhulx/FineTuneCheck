@@ -1,6 +1,7 @@
 {
   "name": "chat_quality",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "chat_quality",
   "judge_type": "llm",
   "judge_criteria": "Evaluate the response on four dimensions: (1) Empathy and emotional intelligence, (2) Helpfulness and actionability of advice, (3) Coherence and naturalness of tone, (4) Appropriateness for the context. Score 1.0 for excellent across all dimensions, 0.5 for adequate but missing nuance, 0.0 for tone-deaf, unhelpful, or inappropriate responses.",

@@ -7,14 +7,19 @@ with sensible defaults and a built-in reference corpus for out-of-the-box use.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from finetunecheck.deep_analysis.activation import ActivationDriftAnalyzer
 from finetunecheck.deep_analysis.calibration import CalibrationAnalyzer
 from finetunecheck.deep_analysis.perplexity import PerplexityAnalyzer
 from finetunecheck.deep_analysis.representation import CKAAnalyzer
 from finetunecheck.deep_analysis.spectral import SpectralAnalyzer
-from finetunecheck.models import DeepAnalysisReport
+from finetunecheck.models import (
+    DeepAnalysisReport,
+    DeepComponentStatus,
+    MeasurementStatus,
+)
 
 if TYPE_CHECKING:
     from finetunecheck.utils.model_loader import AnalysisModel
@@ -139,58 +144,149 @@ class DeepAnalysisOrchestrator:
                 "No reference texts available. Provide reference_texts or use the built-in corpus."
             )
 
-        report = DeepAnalysisReport()
+        report = DeepAnalysisReport(
+            corpus_size=len(reference_texts)
+            if reference_texts is not None
+            else len(REFERENCE_TEXTS),
+            samples_requested=self.num_samples,
+            samples_used=len(texts),
+        )
+        incompatibility = self._compatibility_error(base_model, ft_model)
+        enabled = {
+            "spectral": self.enable_spectral,
+            "perplexity": self.enable_perplexity,
+            "calibration": self.enable_calibration,
+            "cka": self.enable_cka,
+            "activation": self.enable_activation,
+        }
+        if incompatibility:
+            report.status = MeasurementStatus.INCOMPATIBLE
+            report.component_status = {
+                name: DeepComponentStatus(
+                    status=MeasurementStatus.INCOMPATIBLE,
+                    error=incompatibility,
+                )
+                for name, is_enabled in enabled.items()
+                if is_enabled
+            }
+            return report
+
+        def run_component(name: str, callback: Callable[[], Any]) -> None:
+            try:
+                setattr(report, name, callback())
+                report.component_status[name] = DeepComponentStatus(
+                    status=MeasurementStatus.MEASURED
+                )
+            except Exception as exc:
+                logger.exception("%s analysis failed.", name.capitalize())
+                report.component_status[name] = DeepComponentStatus(
+                    status=MeasurementStatus.ERROR,
+                    error=str(exc),
+                )
 
         # --- Spectral analysis (weight-space only, no forward pass) ---
         if self.enable_spectral:
             logger.info("Running spectral analysis...")
-            try:
-                analyzer = SpectralAnalyzer()
-                report.spectral = analyzer.analyze(base_model, ft_model)
-            except Exception:
-                logger.exception("Spectral analysis failed.")
+            run_component("spectral", lambda: SpectralAnalyzer().analyze(base_model, ft_model))
 
         # --- Perplexity distribution shift ---
         if self.enable_perplexity:
             logger.info("Running perplexity distribution analysis...")
-            try:
-                analyzer = PerplexityAnalyzer(batch_size=self.batch_size)
-                report.perplexity = analyzer.analyze(base_model, ft_model, texts)
-            except Exception:
-                logger.exception("Perplexity analysis failed.")
+            run_component(
+                "perplexity",
+                lambda: PerplexityAnalyzer(batch_size=self.batch_size).analyze(
+                    base_model, ft_model, texts
+                ),
+            )
 
         # --- Calibration shift ---
         if self.enable_calibration:
             logger.info("Running calibration analysis...")
-            try:
-                analyzer = CalibrationAnalyzer(batch_size=self.batch_size)
-                report.calibration = analyzer.analyze(base_model, ft_model, texts)
-            except Exception:
-                logger.exception("Calibration analysis failed.")
+            run_component(
+                "calibration",
+                lambda: CalibrationAnalyzer(batch_size=self.batch_size).analyze(
+                    base_model, ft_model, texts
+                ),
+            )
 
         # --- CKA representation similarity ---
         if self.enable_cka:
             logger.info("Running CKA representation analysis...")
-            try:
-                analyzer = CKAAnalyzer(
+            run_component(
+                "cka",
+                lambda: CKAAnalyzer(
                     num_samples=min(self.num_samples, 256),
                     batch_size=self.batch_size,
-                )
-                report.cka = analyzer.analyze(base_model, ft_model, texts)
-            except Exception:
-                logger.exception("CKA analysis failed.")
+                ).analyze(base_model, ft_model, texts),
+            )
 
         # --- Activation drift + head disruption ---
         if self.enable_activation:
             logger.info("Running activation drift analysis...")
-            try:
-                analyzer = ActivationDriftAnalyzer(
+            run_component(
+                "activation",
+                lambda: ActivationDriftAnalyzer(
                     num_samples=min(self.num_samples, 256),
                     batch_size=self.batch_size,
-                )
-                report.activation = analyzer.analyze(base_model, ft_model, texts)
-            except Exception:
-                logger.exception("Activation drift analysis failed.")
+                ).analyze(base_model, ft_model, texts),
+            )
 
+        measured = sum(
+            component.status == MeasurementStatus.MEASURED
+            for component in report.component_status.values()
+        )
+        failed = len(report.component_status) - measured
+        if measured and not failed:
+            report.status = MeasurementStatus.MEASURED
+        elif measured:
+            report.status = MeasurementStatus.ERROR
+        else:
+            report.status = MeasurementStatus.ERROR
         logger.info("Deep analysis complete.")
         return report
+
+    @staticmethod
+    def _compatibility_error(base_model: AnalysisModel, ft_model: AnalysisModel) -> str | None:
+        """Reject paired claims across incompatible architectures/tokenizers."""
+        base_config = getattr(base_model.model, "config", None)
+        ft_config = getattr(ft_model.model, "config", None)
+        architecture_fields = (
+            "model_type",
+            "hidden_size",
+            "num_hidden_layers",
+            "vocab_size",
+        )
+        for field in architecture_fields:
+            base_value = getattr(base_config, field, None)
+            ft_value = getattr(ft_config, field, None)
+            if base_value is not None and ft_value is not None and base_value != ft_value:
+                return (
+                    f"Architecture mismatch for {field}: "
+                    f"base={base_value!r}, fine_tuned={ft_value!r}"
+                )
+
+        base_tokenizer = base_model.tokenizer
+        ft_tokenizer = ft_model.tokenizer
+        tokenizer_fields = (
+            "vocab_size",
+            "bos_token_id",
+            "eos_token_id",
+            "pad_token_id",
+            "chat_template",
+        )
+        for field in tokenizer_fields:
+            base_value = getattr(base_tokenizer, field, None)
+            ft_value = getattr(ft_tokenizer, field, None)
+            if base_value != ft_value:
+                return (
+                    f"Tokenizer mismatch for {field}: base={base_value!r}, fine_tuned={ft_value!r}"
+                )
+        try:
+            if len(base_tokenizer) != len(ft_tokenizer):
+                return (
+                    "Tokenizer vocabulary length mismatch: "
+                    f"base={len(base_tokenizer)}, fine_tuned={len(ft_tokenizer)}"
+                )
+        except TypeError:
+            pass
+        return None

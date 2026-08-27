@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 import importlib
-from importlib import metadata
 from typing import TYPE_CHECKING
 
-try:
-    __version__ = metadata.version("finetunecheck")
-except metadata.PackageNotFoundError:
-    __version__ = "0.1.5"
+from finetunecheck._version import __version__
 
 if TYPE_CHECKING:
     from finetunecheck.eval.runner import EvalRunner

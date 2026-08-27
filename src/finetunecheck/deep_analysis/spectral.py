@@ -78,7 +78,8 @@ class SpectralAnalyzer:
             Dict with frobenius_norm, effective_rank, top_singular_values.
         """
         delta = (w_ft - w_base).float()
-        frob_norm = float(torch.norm(delta, p="fro").item())
+        base_norm = float(torch.norm(w_base.float(), p="fro").item())
+        frob_norm = float(torch.norm(delta, p="fro").item()) / max(base_norm, 1e-12)
 
         # Use randomized SVD for large matrices (faster, memory-efficient)
         min_dim = min(delta.shape)
@@ -87,7 +88,10 @@ class SpectralAnalyzer:
         try:
             if min_dim > 512:
                 # torch.svd_lowrank is efficient for low-rank approximation
-                _U, S, _V = torch.svd_lowrank(delta, q=q)
+                devices = [delta.device.index or 0] if delta.is_cuda else []
+                with torch.random.fork_rng(devices=devices):
+                    torch.manual_seed(0)
+                    _U, S, _V = torch.svd_lowrank(delta, q=q)
             else:
                 S = torch.linalg.svdvals(delta)
         except RuntimeError as exc:
@@ -158,8 +162,12 @@ class SpectralAnalyzer:
 
             analyzed += 1
 
+        if not analyzed:
+            raise ValueError(
+                "No shape-compatible weight matrices were available for spectral analysis"
+            )
         ranks = list(per_layer_rank.values())
-        mean_rank = float(np.mean(ranks)) if ranks else 0.0
+        mean_rank = float(np.mean(ranks))
 
         logger.info(
             "Spectral analysis complete: %d matrices, mean_rank=%.2f, lora=%s (rank=%s)",

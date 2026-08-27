@@ -13,6 +13,7 @@ from finetunecheck.models import (
     CategoryScore,
     ForgettingReport,
     JudgeVerdict,
+    MeasurementStatus,
     ProbeSet,
     SampleRegression,
 )
@@ -62,6 +63,13 @@ class ForgettingAnalyzer:
                 if ft_verdict is None:
                     continue
 
+                if (
+                    base_verdict.status != MeasurementStatus.MEASURED
+                    or ft_verdict.status != MeasurementStatus.MEASURED
+                    or base_verdict.score is None
+                    or ft_verdict.score is None
+                ):
+                    continue
                 score_change = ft_verdict.score - base_verdict.score
                 if score_change <= -threshold:
                     regressions.append(
@@ -69,11 +77,13 @@ class ForgettingAnalyzer:
                             category=category,
                             sample_id=sample_id,
                             prompt=sample_map.get(sample_id, ""),
-                            base_answer=base_verdict.explanation,
-                            ft_answer=ft_verdict.explanation,
+                            base_answer=base_verdict.model_output or "",
+                            ft_answer=ft_verdict.model_output or "",
                             base_score=base_verdict.score,
                             ft_score=ft_verdict.score,
                             score_change=score_change,
+                            base_judge_explanation=base_verdict.explanation,
+                            ft_judge_explanation=ft_verdict.explanation,
                         )
                     )
 
@@ -111,9 +121,12 @@ class ForgettingAnalyzer:
         Returns:
             A complete ``ForgettingReport``.
         """
-        bwt = backward_transfer(base_scores, ft_scores, target_categories)
-
-        crr = capability_retention_rate(base_scores, ft_scores, target_task)
+        targets = list(target_categories or [])
+        if target_task:
+            targets.append(target_task)
+        targets = list(dict.fromkeys(targets))
+        bwt = backward_transfer(base_scores, ft_scores, targets)
+        crr = capability_retention_rate(base_scores, ft_scores, target_categories=targets)
 
         sfi = selective_forgetting_index(crr)
 
@@ -134,12 +147,20 @@ class ForgettingAnalyzer:
             )
 
         return ForgettingReport(
-            backward_transfer=round(bwt, 4),
-            capability_retention_rates={k: round(v, 4) for k, v in crr.items()},
-            selective_forgetting_index=round(sfi, 4),
+            backward_transfer=round(bwt, 4) if bwt is not None else None,
+            capability_retention_rates={
+                key: round(value, 4) if value is not None else None for key, value in crr.items()
+            },
+            selective_forgetting_index=round(sfi, 4) if sfi is not None else None,
             safety_alignment_retention=round(sar, 4) if sar is not None else None,
+            status=(
+                MeasurementStatus.INSUFFICIENT_SAMPLE
+                if any(value is None for value in crr.values())
+                else MeasurementStatus.MEASURED
+            ),
             pattern=pattern,
             most_affected=most_affected,
             resilient=resilient,
+            missing_categories=[key for key, value in crr.items() if value is None],
             regressions=regressions,
         )

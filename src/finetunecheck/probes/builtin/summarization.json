@@ -1,6 +1,7 @@
 {
   "name": "summarization",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "summarization",
   "judge_type": "rouge",
   "judge_criteria": "Compute ROUGE-L F1 between the model output and the reference summary. Score is the ROUGE-L F1 value (0.0 to 1.0).",

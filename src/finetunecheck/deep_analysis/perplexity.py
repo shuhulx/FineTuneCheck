@@ -64,45 +64,54 @@ class PerplexityAnalyzer:
         perplexities = np.zeros(len(texts), dtype=np.float64)
         model.eval()
 
-        for batch_start in range(0, len(texts), self.batch_size):
-            batch_texts = texts[batch_start : batch_start + self.batch_size]
-            encodings = tokenizer(
-                batch_texts,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=self.max_length,
+        stride = max(1, self.max_length // 2)
+        for sample_index, text in enumerate(texts):
+            encoded = tokenizer(text, return_tensors="pt", truncation=False)
+            full_ids = encoded["input_ids"]
+            full_mask = encoded.get("attention_mask", torch.ones_like(full_ids))
+            sequence_length = full_ids.shape[1]
+            if sequence_length < 2:
+                raise ValueError(f"Perplexity sample {sample_index} contains fewer than two tokens")
+
+            nll_sum = 0.0
+            scored_tokens = 0
+            previous_end = 0
+            for begin in range(0, sequence_length, stride):
+                end = min(begin + self.max_length, sequence_length)
+                new_token_count = end - previous_end
+                input_ids = full_ids[:, begin:end].to(device)
+                attention_mask = full_mask[:, begin:end].to(device)
+                labels = input_ids.clone()
+                labels[:, :-new_token_count] = -100
+
+                with torch.no_grad():
+                    logits = model(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                    ).logits
+
+                shift_logits = logits[:, :-1, :].contiguous()
+                shift_labels = labels[:, 1:].contiguous()
+                valid = (shift_labels != -100) & attention_mask[:, 1:].bool()
+                if valid.any():
+                    losses = torch.nn.functional.cross_entropy(
+                        shift_logits.reshape(-1, shift_logits.shape[-1]),
+                        shift_labels.reshape(-1),
+                        reduction="none",
+                        ignore_index=-100,
+                    ).reshape_as(shift_labels)
+                    nll_sum += float(losses[valid].sum().item())
+                    scored_tokens += int(valid.sum().item())
+
+                previous_end = end
+                if end == sequence_length:
+                    break
+
+            if scored_tokens == 0:
+                raise ValueError(f"Perplexity sample {sample_index} produced no scored tokens")
+            perplexities[sample_index] = float(
+                torch.exp(torch.tensor(min(nll_sum / scored_tokens, 100.0))).item()
             )
-            input_ids = encodings["input_ids"].to(device)
-            attention_mask = encodings["attention_mask"].to(device)
-
-            with torch.no_grad():
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                logits = outputs.logits  # (batch, seq_len, vocab_size)
-
-            # Shift so that logits[t] predicts token[t+1]
-            shift_logits = logits[:, :-1, :].contiguous()
-            shift_labels = input_ids[:, 1:].contiguous()
-            shift_mask = attention_mask[:, 1:].contiguous()
-
-            # Per-token log-probabilities via cross-entropy (no reduction)
-            log_probs = torch.nn.functional.log_softmax(shift_logits, dim=-1)
-            # Gather the log-prob for the actual next token
-            token_log_probs = log_probs.gather(dim=-1, index=shift_labels.unsqueeze(-1)).squeeze(-1)
-
-            # Mask padding tokens and compute per-sample mean NLL
-            masked_log_probs = token_log_probs * shift_mask.float()
-            token_counts = shift_mask.float().sum(dim=-1).clamp(min=1)
-            mean_nll = -masked_log_probs.sum(dim=-1) / token_counts
-
-            # Perplexity = exp(mean_nll), clamp to avoid inf
-            ppl = torch.exp(mean_nll.clamp(max=100.0))
-            ppl_np = ppl.cpu().numpy().astype(np.float64)
-
-            for i, val in enumerate(ppl_np):
-                idx = batch_start + i
-                if idx < len(perplexities):
-                    perplexities[idx] = val
 
         return perplexities
 

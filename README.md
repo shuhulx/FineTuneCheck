@@ -1,217 +1,221 @@
 # FineTuneCheck
 
-**Diagnostic tool for LLM fine-tuning outcomes.**
+Evidence-aware comparison of base and fine-tuned language models.
 
-Automated base-vs-fine-tuned comparison with forgetting detection, capability retention scoring, and visual diff reports.
-
+[![CI](https://github.com/shuhulx/finetunecheck/actions/workflows/ci.yml/badge.svg)](https://github.com/shuhulx/finetunecheck/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/finetunecheck)](https://pypi.org/project/finetunecheck/)
-[![Downloads](https://img.shields.io/pypi/dm/finetunecheck)](https://pypi.org/project/finetunecheck/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-172%20passed-brightgreen.svg)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 
----
+FineTuneCheck measures target-task change, general-capability retention, safety smoke behavior, and sample-level regressions. It preserves the underlying evidence and returns `INSUFFICIENT_EVIDENCE` whenever required measurements are missing, errored, incompatible, or too small for a confident verdict.
 
-## The Problem
+Results support investigation. They are not independently sufficient for deployment approval.
 
-You fine-tuned a model. It's better at your task. But **what did it forget?**
+## Highlights
 
-Fine-tuning improves target capabilities at the cost of general ones. Without measurement, you're shipping blind — did safety degrade? Is reasoning still intact? Was the trade-off worth it?
-
-**FineTuneCheck answers these questions in one command.**
-
-## Features
-
-- **12 built-in probe categories** — reasoning, code, math, safety, chat, creative writing, and more
-- **4 forgetting metrics** — Backward Transfer, Capability Retention Rate, Selective Forgetting Index, Safety Alignment Retention
-- **Multi-judge system** — exact match, F1, rule-based, ROUGE, LLM-as-judge
-- **Deep analysis** — CKA, spectral, perplexity shift, calibration (ECE), activation drift
-- **Multi-run comparison** — Pareto frontier across fine-tuning runs
-- **5 verdict levels** — EXCELLENT → GOOD → GOOD_WITH_CONCERNS → POOR → HARMFUL
-- **Composite ROI score** — 0-100 balancing improvement vs forgetting cost
-- **HTML/JSON/CSV/Markdown reports** — interactive Plotly charts
-- **MCP server** — 9 tools for AI assistant integration
-- **LoRA + GGUF support** — works with PEFT adapters and quantized models
+- Paired base-versus-fine-tuned evaluation with raw outputs and judge evidence
+- Explicit local, OpenAI, Anthropic, or caller-supplied judge providers
+- Fail-closed code evaluation through an external `Executor` boundary
+- BWT, CRR, SFI, SAR, bounded-score target deltas, paired intervals, and ROI provenance
+- Multi-target profiles and compatible multi-run Pareto comparison
+- Transformers, vLLM, llama.cpp/GGUF, and local or remote PEFT adapters
+- Self-contained HTML plus JSON, CSV, and Markdown reports
+- Experimental CKA, rank@k spectral, sliding-window perplexity, calibration, and activation diagnostics
+- Nine asynchronous MCP tools
 
 ## Install
+
+The core package keeps configuration, metrics, caching, and reporting lightweight:
 
 ```bash
 pip install finetunecheck
 ```
 
-Optional backends:
+Install a model backend for evaluation:
 
 ```bash
-pip install finetunecheck[api-judge]   # LLM-as-judge (Anthropic + OpenAI)
-pip install finetunecheck[vllm]        # vLLM inference backend
-pip install finetunecheck[gguf]        # GGUF model support
-pip install finetunecheck[mcp]         # MCP server for AI assistants
-pip install finetunecheck[all]         # Everything
+pip install "finetunecheck[inference]"   # Transformers + PEFT
+pip install "finetunecheck[vllm]"        # vLLM
+pip install "finetunecheck[gguf]"        # llama.cpp / GGUF
 ```
 
-## Quick Start
+Local PEFT adapter directories are detected automatically. Use `peft://ORG/ADAPTER` or
+`peft://ORG/ADAPTER@REVISION` for an adapter hosted on Hugging Face.
 
-### CLI
-
-Run a full evaluation against the base model:
+Other extras:
 
 ```bash
-ftcheck run meta-llama/Llama-3-8B ./my-finetuned-model \
-  --profile code --report report.html
+pip install "finetunecheck[deep]"        # experimental deep analysis
+pip install "finetunecheck[api-judge]"   # OpenAI and Anthropic judge clients
+pip install "finetunecheck[mcp]"         # MCP SDK 1.x
 ```
 
-Quick 5-minute sanity check (20 samples, 4 categories):
+## Quick check
+
+Quick mode is an offline-runnable evaluation path: it needs local model weights but no API judge. It selects 10 cases from each of math, classification, instruction following, and safety.
 
 ```bash
-ftcheck quick meta-llama/Llama-3-8B ./my-finetuned-model
+ftcheck quick BASE_MODEL FINETUNED_MODEL --report quick-report.html
 ```
 
-Compare multiple fine-tuning runs with Pareto frontier analysis:
+The bundled cases are small smoke probes, so the verdict will normally be `INSUFFICIENT_EVIDENCE`. That is intentional.
+
+## Full evaluation
+
+LLM-judged probes require a dedicated judge. FineTuneCheck never silently reuses either evaluated model.
 
 ```bash
-ftcheck compare meta-llama/Llama-3-8B ./run1 ./run2 ./run3 \
-  --report comparison.html
+ftcheck run BASE_MODEL FINETUNED_MODEL \
+  --profile classification \
+  --judge local:JUDGE_MODEL \
+  --report report.html
 ```
 
-Deep analysis — CKA, spectral, perplexity shift, calibration:
+API judges are explicit:
 
 ```bash
-ftcheck run meta-llama/Llama-3-8B ./my-finetuned-model --deep
+export OPENAI_API_KEY=...
+ftcheck run BASE_MODEL FINETUNED_MODEL \
+  --profile chat \
+  --judge openai:gpt-4o-mini
 ```
 
-Browse available probes and profiles:
+If a required judge is missing, evaluation fails before the base or fine-tuned model is loaded. Unparseable judge output becomes `ERROR`, not a neutral score.
 
-```bash
-ftcheck list-probes
-ftcheck list-profiles
-```
+Code probes do not execute generated Python on the host. Without a caller-supplied isolation runtime implementing `Executor`, their status is `NOT_RUN` and the overall verdict is evidence-limited.
 
-### Python API
+## Python API
 
 ```python
-from finetunecheck import EvalRunner
-from finetunecheck.config import EvalConfig
-
+from finetunecheck.config import EvalConfig, JudgeConfig
+from finetunecheck.eval.runner import EvalRunner
 from finetunecheck.profiles.loader import ProfileLoader
 
 config = EvalConfig(
-    base_model="meta-llama/Llama-3-8B",
-    finetuned_model="./my-finetuned-model",
-    deep_analysis=True,
+    base_model="BASE_MODEL",
+    finetuned_model="FINETUNED_MODEL",
+    judge=JudgeConfig(provider="local", model="JUDGE_MODEL"),
+    device="auto",
 )
-config = ProfileLoader.apply_to_config("code", config)
+config = ProfileLoader.apply_to_config("classification", config)
 
-runner = EvalRunner(config)
-results = runner.run()
+results = EvalRunner(config).run()
 
-print(f"Verdict: {results.verdict.value}")        # GOOD_WITH_CONCERNS
-print(f"ROI Score: {results.roi_score}")           # 72.5
-print(f"BWT: {results.forgetting.backward_transfer:+.3f}")  # -0.082
-print(f"Safety: {results.forgetting.safety_alignment_retention}")  # 0.97
+print(results.verdict.value)
+print(results.target_improvements)
+print(results.roi_score, results.roi_coverage)
+if results.forgetting:
+    print(results.forgetting.backward_transfer)
 ```
 
-## Probe Categories
-
-| Category | Samples | Judge | What It Tests |
-|----------|---------|-------|---------------|
-| reasoning | 15 (seed set) | LLM | Logical deduction, chain-of-thought |
-| code | 15 (seed set) | rule-based | Code generation, debugging |
-| math | 15 (seed set) | exact match | Arithmetic, algebra, word problems |
-| safety | 10 (seed set) | rule-based | Refusal of harmful prompts, alignment |
-| chat_quality | 10 (seed set) | LLM | Helpfulness, coherence, tone |
-| creative_writing | 8 (seed set) | LLM | Storytelling, style, creativity |
-| summarization | 10 (seed set) | ROUGE | Compression, faithfulness |
-| extraction | 10 (seed set) | F1 | Named entities, structured data |
-| classification | 12 (seed set) | exact match | Sentiment, topic, intent |
-| instruction_following | 12 (seed set) | rule-based | Format compliance, constraints |
-| multilingual | 10 (seed set) | LLM | Translation, cross-lingual transfer |
-| world_knowledge | 15 (seed set) | exact match | Facts, trivia, common sense |
-
-<details>
-<summary><strong>Forgetting Metrics</strong></summary>
-
-| Metric | Formula | Interpretation |
-|--------|---------|----------------|
-| **BWT** (Backward Transfer) | avg(ft − base) on non-target categories | Negative = forgetting |
-| **CRR** (Capability Retention Rate) | ft_score / base_score per category | < 0.95 = meaningful regression |
-| **SFI** (Selective Forgetting Index) | std(CRR values) | High = uneven forgetting |
-| **SAR** (Safety Alignment Retention) | ft_safety / base_safety | < 0.70 → HARMFUL verdict |
-
-</details>
-
-<details>
-<summary><strong>Verdict System</strong></summary>
-
-| Verdict | Condition | Meaning |
-|---------|-----------|---------|
-| **EXCELLENT** | ROI ≥ 80, no concerns | Strong improvement, minimal forgetting |
-| **GOOD** | ROI ≥ 50, no concerns | Solid improvement, acceptable trade-offs |
-| **GOOD_WITH_CONCERNS** | ROI ≥ 60, concerns present | Improvement exists but forgetting is notable |
-| **POOR** | ROI < 50, or ROI < 60 with concerns, or catastrophic forgetting | Marginal improvement, significant forgetting |
-| **HARMFUL** | SAR < 0.70 | Safety alignment critically degraded |
-
-</details>
-
-## HTML Report Contents
-
-Generate with `--report report.html` (or `-f html`). Single self-contained file, no server required.
-
-**Always included:**
-- **Verdict banner** — verdict label + ROI score
-- **Category Scores: Base vs Fine-tuned** — grouped bar chart with error bars (±1 std), radar chart, and per-category table
-- **ROI Score Breakdown** — stacked bar showing the 5 weighted components: Target (30pt), Retention (25pt), Safety (25pt), Selectivity (10pt), BWT (10pt)
-- **Forgetting Analysis** — capability retention rate per category, most affected / resilient lists
-- **Worst Sample-Level Regressions** — top 15 samples where fine-tuning hurt the most
-- **Concerns & Recommendations** — actionable items from the verdict engine
-
-**With `--deep`:**
-- **CKA Similarity** — per-layer alignment bar chart, most diverged layers highlighted
-- **Perplexity Distribution** — overlapping histograms (base vs fine-tuned) with inline Wasserstein distance and tail fraction annotation
-- **Spectral Analysis** — effective rank per layer with mean reference line
-- **Calibration (Reliability Diagram)** — confidence vs accuracy for base and fine-tuned with ECE values
-- **Activation Drift** — per-layer drift (1 - cosine sim) bar chart
-
-## Deep Analysis
-
-Enable with `--deep` for additional diagnostics:
-
-- **CKA Similarity** — per-layer representation alignment between base and fine-tuned
-- **Spectral Analysis** — effective rank changes, singular value distribution
-- **Perplexity Distribution Shift** — KL divergence and Wasserstein distance of per-token perplexity
-- **Calibration (ECE)** — expected calibration error before and after fine-tuning
-- **Activation Drift** — per-layer cosine similarity, disrupted attention heads
-
-## Multi-Run Comparison
-
-```bash
-ftcheck compare base_model ./run1 ./run2 ./run3 --report comparison.html
-```
-
-Outputs per-run verdicts, best overall / best target / least forgetting picks, and Pareto frontier analysis.
-
-## Custom Probes
+For deterministic smoke evaluation, use `QuickConfig`:
 
 ```python
-from finetunecheck.probes.registry import ProbeRegistry
+from finetunecheck.config import QuickConfig
+from finetunecheck.eval.runner import EvalRunner
 
-ProbeRegistry.register_from_csv("my_probes.csv", name="custom", category="domain")
-ProbeRegistry.register_from_jsonl("my_probes.jsonl", name="custom", category="domain")
+results = EvalRunner(
+    QuickConfig(base_model="BASE_MODEL", finetuned_model="FINETUNED_MODEL")
+).run()
 ```
 
-## Evaluation Profiles
+`device="auto"` is preserved through Python, CLI, and MCP. The selected inference backend is recorded in result provenance.
 
-| Profile | Focus Areas |
-|---------|-------------|
-| `general` | Balanced evaluation across all capability categories |
-| `code` | Code generation, mathematical reasoning |
-| `chat` | Chat quality, instruction following, multilingual, safety |
-| `classification` | Classification, extraction (lightweight) |
-| `rag` | Extraction, summarization, factual knowledge |
-| `medical` | Reasoning, factual accuracy, safety (medical domain) |
-| `legal` | Reasoning, extraction (legal domain) |
-| `safety_critical` | All categories with extreme safety weight (99%+ SAR) |
+## Evidence and verdicts
 
-## MCP Integration
+Every category carries one of these statuses:
+
+- `MEASURED`
+- `NOT_RUN`
+- `ERROR`
+- `INCOMPATIBLE`
+- `INSUFFICIENT_SAMPLE`
+
+Overall verdicts are `EXCELLENT`, `GOOD`, `GOOD_WITH_CONCERNS`, `POOR`, `HARMFUL`, or `INSUFFICIENT_EVIDENCE`.
+
+Missing evidence contributes no perfect retention or safety points. Confident verdicts require complete paired measurements, target evidence, full ROI coverage, adequate sample counts, and probe provenance that supports the claim. Even a confident verdict is decision support, not deployment authorization.
+
+## Metrics
+
+| Metric | 2.0.0 meaning |
+|---|---|
+| Target delta | Fine-tuned minus base bounded score, aggregated as a macro mean across every target |
+| BWT | Mean fine-tuned minus base score on non-target categories; higher is better |
+| CRR | Fine-tuned/base ratio on non-target categories; undefined near a zero baseline |
+| SFI | Dispersion of downside-only retention losses |
+| SAR | Safety smoke-score ratio; undefined when safety evidence or its baseline is missing |
+| ROI | Versioned weighted composite with component values, weights, and evidence coverage |
+
+The `target_task` field remains as a compatibility alias for the first entry in `target_tasks`.
+
+## Bundled probes
+
+All bundled probes are versioned Apache-2.0 smoke fixtures, not independently validated benchmark datasets.
+
+| Probe | Seed cases | Judge |
+|---|---:|---|
+| reasoning | 15 | dedicated LLM |
+| code | 15 | external isolated executor |
+| math | 15 | numeric equivalence |
+| safety | 15 | refusal/over-refusal heuristic smoke check |
+| chat_quality | 10 | dedicated LLM |
+| creative_writing | 8 | dedicated LLM |
+| summarization | 10 | ROUGE-L lexical overlap only |
+| extraction | 10 | token F1 |
+| classification | 12 | exact label |
+| instruction_following | 12 | validated constraints |
+| multilingual | 10 | dedicated LLM |
+| world_knowledge | 15 | exact answer/alias |
+
+Safety reports separate harmful-request refusal from benign over-refusal and detect refusal followed by apparent compliance. The heuristic is not called alignment certification and cannot satisfy the stronger safety requirement in `safety_critical`.
+
+## Profiles
+
+```bash
+ftcheck list-profiles
+ftcheck list-probes
+```
+
+Profiles: `general`, `code`, `chat`, `classification`, `rag`, `medical`, `legal`, and `safety_critical`.
+
+Every target in a profile is evaluated and excluded consistently from retention metrics. `safety_critical` enforces measured SAR >= 0.99 and also requires stronger safety evidence than the bundled heuristic.
+
+## Custom probes
+
+```python
+from finetunecheck.probes.custom import CustomProbe
+from finetunecheck.probes.registry import ProbeRegistry
+
+probe = CustomProbe.from_csv(
+    name="domain_eval",
+    csv_path="domain_eval.csv",
+    category="domain",
+    judge_type="exact_match",
+)
+ProbeRegistry.register(probe)
+```
+
+`CustomProbe.from_jsonl(...)` follows the same pattern. Use sourced, licensed, contamination-reviewed data with enough paired samples when making claims beyond smoke diagnosis.
+
+## Reports and comparison
+
+```bash
+ftcheck run BASE_MODEL FINETUNED_MODEL \
+  --profile classification \
+  --judge local:JUDGE_MODEL \
+  --report results.html
+
+ftcheck compare BASE_MODEL RUN_1 RUN_2 RUN_3 \
+  --profile classification \
+  --judge local:JUDGE_MODEL \
+  --report comparison.html
+```
+
+HTML reports embed Plotly by default and include statuses, configured ROI weights, selected sample IDs, raw outputs, judge/test evidence, and provenance. Comparison rejects runs with mismatched bases, probe digests, judges, targets, or schema versions and renders all compatible runs.
+
+## MCP
+
+Install `finetunecheck[mcp]`, then configure:
 
 ```json
 {
@@ -224,53 +228,23 @@ ProbeRegistry.register_from_jsonl("my_probes.jsonl", name="custom", category="do
 }
 ```
 
-Tools: `evaluate_finetune`, `quick_check`, `detect_forgetting`, `compare_runs`, `get_verdict`, `suggest_fixes`, `generate_report`, `list_profiles`, `run_probe`
-
-## Export Formats
-
-```bash
-ftcheck run base ft --report results.html -f html       # Interactive HTML
-ftcheck run base ft --report results.json -f json       # Machine-readable
-ftcheck run base ft --report results.csv -f csv         # Spreadsheet
-ftcheck run base ft --report results.md -f markdown     # Documentation
-```
-
-## CI Integration
-
-```bash
-# Exit code 1 if verdict is POOR or HARMFUL
-ftcheck run base_model finetuned_model --exit-code
-```
-
-## Architecture
-
-```
-finetunecheck/
-├── eval/           # EvalRunner pipeline, judges, scoring
-├── forgetting/     # BWT, CRR, SFI, SAR metrics
-├── compare/        # Multi-run comparison, Pareto frontier
-├── deep_analysis/  # CKA, spectral, perplexity, calibration
-├── probes/         # 12 built-in probe sets + custom probe support
-├── report/         # HTML/JSON/CSV/Markdown generation
-├── mcp/            # MCP server (9 tools)
-└── models.py       # Pydantic v2 data contracts
-```
+The server exposes `evaluate_finetune`, `quick_check`, `detect_forgetting`, `compare_runs`, `get_verdict`, `suggest_fixes`, `generate_report`, `list_profiles`, and `run_probe`. Model work runs through a bounded asynchronous worker gate. Tool failures are protocol errors.
 
 ## Development
 
 ```bash
-git clone https://github.com/shuhulx/finetunecheck.git
-cd finetunecheck
-pip install -e ".[dev]"
+pip install -e ".[dev,mcp]"
+ruff check .
+ruff format --check .
+pyright
 pytest
+python -m build
 ```
 
-## References
+CI tests Python 3.10, 3.11, and 3.12, enforces coverage, builds the package, installs fresh wheels, verifies MCP registration, and loads a report in Chromium.
 
-- Luo et al., "An Empirical Study of Catastrophic Forgetting in Large Language Models During Continual Fine-tuning" (2023)
-- Kornblith et al., "Similarity of Neural Network Representations Revisited" (ICML 2019) — CKA
-- Guo et al., "On Calibration of Modern Neural Networks" (2017) — ECE
+See [VALIDATION.md](VALIDATION.md), [MIGRATION.md](MIGRATION.md), and [LIMITATIONS.md](LIMITATIONS.md) before interpreting results.
 
 ## License
 
-Apache 2.0
+Apache-2.0

@@ -1,4 +1,4 @@
-"""Manages pre-computed and cached baselines for common base models."""
+"""Manages cached baselines and optional caller-provided local baseline data."""
 
 from __future__ import annotations
 
@@ -10,21 +10,14 @@ from finetunecheck.models import CategoryScore
 
 
 class BaselineManager:
-    """Manages pre-computed and cached baselines.
+    """Manages cached baselines and optional local baseline data.
 
-    Pre-computed baselines are shipped with the package for popular models.
-    Runtime baselines are cached via BaselineCache for re-use.
+    FineTuneCheck does not ship model scores. Runtime measurements are cached via
+    :class:`BaselineCache`; callers may subclass this manager or populate
+    ``PRECOMPUTED`` to load their own versioned local fixtures.
     """
 
-    PRECOMPUTED: dict[str, str] = {
-        "meta-llama/Llama-3.1-8B": "llama-3.1-8b.json",
-        "meta-llama/Llama-3.1-8B-Instruct": "llama-3.1-8b.json",
-        "mistralai/Mistral-7B-v0.3": "mistral-7b-v0.3.json",
-        "mistralai/Mistral-7B-Instruct-v0.3": "mistral-7b-v0.3.json",
-        "Qwen/Qwen2.5-7B": "qwen-2.5-7b.json",
-        "Qwen/Qwen2.5-7B-Instruct": "qwen-2.5-7b.json",
-        "microsoft/Phi-3-mini-4k-instruct": "phi-3-mini.json",
-    }
+    PRECOMPUTED: dict[str, str] = {}
 
     def __init__(self) -> None:
         self._data_dir = Path(__file__).parent / "data"
@@ -36,7 +29,7 @@ class BaselineManager:
         num_samples: int,
         cache: BaselineCache,
     ) -> CategoryScore | None:
-        """Check precomputed baselines, then cache. Return None if nothing found.
+        """Check the runtime cache, then optional local data.
 
         Args:
             model_path: HuggingFace model ID or local path.
@@ -53,7 +46,7 @@ class BaselineManager:
         if cached is not None:
             return cached
 
-        # Check precomputed baselines
+        # Check optional caller-provided local baseline data.
         precomputed = self._load_precomputed(model_path, probe_name)
         if precomputed is not None:
             return precomputed
@@ -81,7 +74,7 @@ class BaselineManager:
         cache.set(cache_key, score)
 
     def _load_precomputed(self, model_path: str, probe_name: str) -> CategoryScore | None:
-        """Load a precomputed baseline from the data directory.
+        """Load optional caller-provided baseline data from the data directory.
 
         Returns None if no precomputed data exists for this model/probe.
         """

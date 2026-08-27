@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from statistics import mean
+
+from finetunecheck.forgetting.metrics import REGRESSION_THRESHOLDS
 from finetunecheck.models import ForgettingPattern
 
 
@@ -10,9 +13,9 @@ class ForgettingDetector:
 
     @staticmethod
     def classify_pattern(
-        crr: dict[str, float],
-        bwt: float,
-        sfi: float,
+        crr: dict[str, float | None],
+        bwt: float | None,
+        sfi: float | None,
     ) -> ForgettingPattern:
         """Classify the forgetting pattern based on retention metrics.
 
@@ -30,25 +33,27 @@ class ForgettingDetector:
         Returns:
             The classified ``ForgettingPattern``.
         """
-        if not crr:
-            return ForgettingPattern.MINIMAL
-
-        mean_crr = sum(crr.values()) / len(crr)
-
-        if mean_crr > 0.95:
-            return ForgettingPattern.MINIMAL
-
-        if mean_crr < 0.70 and sfi < 0.1:
+        measured = [value for value in crr.values() if value is not None]
+        if bwt is None or not measured:
+            return ForgettingPattern.UNAVAILABLE
+        worst = min(measured)
+        mean_crr = mean(min(1.0, value) for value in measured)
+        collapsed = worst < REGRESSION_THRESHOLDS["individual_collapse"]
+        if bwt <= REGRESSION_THRESHOLDS["bwt_catastrophic"] or (
+            collapsed and mean_crr < REGRESSION_THRESHOLDS["retention_critical"]
+        ):
             return ForgettingPattern.CATASTROPHIC
-
-        if sfi > 0.15:
+        if collapsed or (sfi is not None and sfi >= REGRESSION_THRESHOLDS["sfi_selective"]):
             return ForgettingPattern.SELECTIVE
-
+        if bwt <= REGRESSION_THRESHOLDS["bwt_gradual"]:
+            return ForgettingPattern.GRADUAL
+        if mean_crr >= REGRESSION_THRESHOLDS["retention_warning"]:
+            return ForgettingPattern.MINIMAL
         return ForgettingPattern.GRADUAL
 
     @staticmethod
     def identify_affected_capabilities(
-        crr: dict[str, float],
+        crr: dict[str, float | None],
         threshold: float = 0.95,
     ) -> tuple[list[str], list[str]]:
         """Identify most affected and resilient capabilities.
@@ -66,6 +71,8 @@ class ForgettingDetector:
         resilient: list[tuple[str, float]] = []
 
         for cat, rate in crr.items():
+            if rate is None:
+                continue
             if rate < threshold:
                 affected.append((cat, rate))
             else:

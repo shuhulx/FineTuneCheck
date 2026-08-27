@@ -101,7 +101,9 @@ class TestParetoFrontier:
             for j in frontier:
                 if i == j:
                     continue
-                dominated = (points[j][0] >= points[i][0] and
-                             points[j][1] >= points[i][1] and
-                             (points[j][0] > points[i][0] or points[j][1] > points[i][1]))
+                dominated = (
+                    points[j][0] >= points[i][0]
+                    and points[j][1] >= points[i][1]
+                    and (points[j][0] > points[i][0] or points[j][1] > points[i][1])
+                )
                 assert not dominated, f"Point {i} is dominated by {j} on frontier"

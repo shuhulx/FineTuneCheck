@@ -179,12 +179,10 @@ class TestCalibrationAnalyzer:
         assert ece > 0.5
 
     def test_ece_empty(self):
-        """ECE of empty arrays should be 0."""
+        """Empty calibration evidence must be unavailable, not perfect."""
         cal = CalibrationAnalyzer()
-        ece, acc, conf, _edges = cal.compute_ece(np.array([]), np.array([]))
-        assert ece == 0.0
-        assert len(acc) == cal.num_bins
-        assert len(conf) == cal.num_bins
+        with pytest.raises(ValueError, match="unavailable"):
+            cal.compute_ece(np.array([]), np.array([]))
 
     def test_ece_bins_count(self):
         """ECE should return correct number of bins."""

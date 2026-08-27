@@ -4,7 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <script src="{{ plotly_js }}"></script>
+    {% if plotly_inline %}
+    <script>{{ plotly_inline | safe }}</script>
+    {% else %}
+    <script src="{{ plotly_src }}"></script>
+    {% endif %}
     <style>
         /* ================================================================
            FineTuneCheck Report — clean, enterprise-quality styling
@@ -235,6 +239,15 @@
             text-overflow: ellipsis;
         }
 
+        .evidence-output {
+            max-width: 420px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 11px;
+            color: var(--slate-600);
+        }
+
         /* --- Recommendations & concerns --- */
         .pill-list {
             list-style: none;
@@ -328,7 +341,7 @@
         <h1>Fine-Tuning Evaluation</h1>
         <div class="verdict-badge">
             {{ verdict_label }}
-            <span class="roi">ROI {{ results.roi_score | int }} / 100</span>
+            <span class="roi">ROI {{ results.roi_score | int if results.roi_score is not none else 'unavailable' }} / 100</span>
         </div>
     </div>
 </div>
@@ -345,10 +358,10 @@
                 <span class="label">Fine-tuned</span>
                 <code>{{ results.finetuned_model }}</code>
             </div>
-            {% if results.target_task %}
+            {% if results.target_tasks %}
             <div class="model-tag">
-                <span class="label">Target Task</span>
-                <code>{{ results.target_task }}</code>
+                <span class="label">Target Tasks</span>
+                <code>{{ results.target_tasks | join(', ') }}</code>
             </div>
             {% endif %}
         </div>
@@ -364,20 +377,20 @@
 
             <div class="stat-grid">
                 <div class="stat-card">
-                    <div class="stat-value {{ 'stat-positive' if results.target_improvement > 0 else 'stat-negative' }}">
-                        {{ "%+.1f" | format(results.target_improvement * 100) }}%
+                    <div class="stat-value {{ 'stat-positive' if results.target_improvement is not none and results.target_improvement > 0 else 'stat-negative' if results.target_improvement is not none else 'stat-neutral' }}">
+                        {{ "%+.3f" | format(results.target_improvement) if results.target_improvement is not none else 'Unavailable' }}
                     </div>
-                    <div class="stat-label">Target Improvement</div>
+                    <div class="stat-label">Target Absolute Delta</div>
                 </div>
                 {% if results.forgetting %}
                 <div class="stat-card">
-                    <div class="stat-value {{ 'stat-positive' if results.forgetting.backward_transfer > -0.05 else 'stat-negative' if results.forgetting.backward_transfer < -0.15 else 'stat-neutral' }}">
-                        {{ "%.2f" | format(results.forgetting.backward_transfer) }}
+                    <div class="stat-value {{ 'stat-positive' if results.forgetting.backward_transfer is not none and results.forgetting.backward_transfer > -0.05 else 'stat-negative' if results.forgetting.backward_transfer is not none and results.forgetting.backward_transfer < -0.15 else 'stat-neutral' }}">
+                        {{ "%.2f" | format(results.forgetting.backward_transfer) if results.forgetting.backward_transfer is not none else 'Unavailable' }}
                     </div>
                     <div class="stat-label">Backward Transfer</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{{ "%.2f" | format(results.forgetting.selective_forgetting_index) }}</div>
+                    <div class="stat-value">{{ "%.2f" | format(results.forgetting.selective_forgetting_index) if results.forgetting.selective_forgetting_index is not none else 'Unavailable' }}</div>
                     <div class="stat-label">Selective Forgetting</div>
                 </div>
                 {% if results.forgetting.safety_alignment_retention is not none %}
@@ -417,21 +430,23 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for cat in results.base_scores.keys() | sort %}
-                    {% set bs = results.base_scores[cat].mean_score %}
-                    {% set fs = results.ft_scores[cat].mean_score %}
-                    {% set delta = fs - bs %}
+                    {% for cat in (results.base_scores.keys() | list + results.ft_scores.keys() | list) | unique | sort %}
+                    {% set base_category = results.base_scores.get(cat) %}
+                    {% set ft_category = results.ft_scores.get(cat) %}
+                    {% set bs = base_category.mean_score if base_category else none %}
+                    {% set fs = ft_category.mean_score if ft_category else none %}
+                    {% set delta = fs - bs if fs is not none and bs is not none else none %}
                     <tr>
                         <td><strong>{{ cat }}</strong></td>
-                        <td class="score-cell">{{ "%.3f" | format(bs) }}</td>
-                        <td class="score-cell">{{ "%.3f" | format(fs) }}</td>
-                        <td class="score-cell {{ 'score-up' if delta > 0.005 else 'score-down' if delta < -0.005 else 'score-flat' }}">
-                            {{ "%+.3f" | format(delta) }}
+                        <td class="score-cell">{{ "%.3f" | format(bs) if bs is not none else (base_category.status.value if base_category else 'NOT_RUN') }}</td>
+                        <td class="score-cell">{{ "%.3f" | format(fs) if fs is not none else (ft_category.status.value if ft_category else 'NOT_RUN') }}</td>
+                        <td class="score-cell {{ 'score-up' if delta is not none and delta > 0.005 else 'score-down' if delta is not none and delta < -0.005 else 'score-flat' }}">
+                            {{ "%+.3f" | format(delta) if delta is not none else 'Unavailable' }}
                         </td>
                         {% if results.forgetting %}
-                        {% set ret = results.forgetting.capability_retention_rates.get(cat, 1.0) %}
-                        <td class="score-cell {{ 'score-up' if ret >= 0.95 else 'score-down' if ret < 0.85 else 'stat-neutral' }}">
-                            {{ "%.1f" | format(ret * 100) }}%
+                        {% set ret = results.forgetting.capability_retention_rates.get(cat) %}
+                        <td class="score-cell {{ 'score-up' if ret is not none and ret >= 0.95 else 'score-down' if ret is not none and ret < 0.85 else 'stat-neutral' }}">
+                            {{ "%.1f%%" | format(ret * 100) if ret is not none else 'Unavailable' }}
                         </td>
                         {% endif %}
                     </tr>
@@ -481,6 +496,35 @@
     </div>
     {% endif %}
 
+    {% if results.safety_smoke %}
+    <div class="section">
+        <div class="section-header">
+            <h2>Safety Heuristic Smoke Check</h2>
+        </div>
+        <div class="section-body">
+            <p class="summary-text">
+                This measures refusal behavior and benign over-refusal only. It does not
+                establish safety alignment or deployment readiness.
+            </p>
+            <table class="data-table" style="margin-top: 18px;">
+                <thead>
+                    <tr><th>Model</th><th>Status</th><th>Harmful refusal rate</th><th>Benign over-refusal rate</th></tr>
+                </thead>
+                <tbody>
+                    {% for model_label, measurement in [('Base', results.safety_smoke.base), ('Fine-tuned', results.safety_smoke.fine_tuned)] %}
+                    <tr>
+                        <td>{{ model_label }}</td>
+                        <td>{{ measurement.status.value }}</td>
+                        <td class="score-cell">{{ "%.1f%%" | format(measurement.harmful_refusal_rate * 100) if measurement.harmful_refusal_rate is not none else 'Unavailable' }} ({{ measurement.successful_refusals }}/{{ measurement.harmful_requests }})</td>
+                        <td class="score-cell">{{ "%.1f%%" | format(measurement.benign_overrefusal_rate * 100) if measurement.benign_overrefusal_rate is not none else 'Unavailable' }} ({{ measurement.benign_overrefusals }}/{{ measurement.benign_controls }})</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- ====================== ROI BREAKDOWN ====================== -->
     {% if figures.roi_breakdown %}
     <div class="section">
@@ -494,12 +538,27 @@
     {% endif %}
 
     <!-- ====================== DEEP ANALYSIS ====================== -->
-    {% if figures.deep_analysis %}
+    {% if results.deep_analysis %}
     <div class="section">
         <div class="section-header">
             <h2>Deep Analysis</h2>
         </div>
         <div class="section-body">
+            <p class="summary-text">
+                Experimental analysis status: <strong>{{ results.deep_analysis.status.value }}</strong>.
+                Used {{ results.deep_analysis.samples_used }} of {{ results.deep_analysis.samples_requested }} requested texts
+                (bundled corpus size: {{ results.deep_analysis.corpus_size }}).
+            </p>
+            {% if results.deep_analysis.component_status %}
+            <table class="data-table" style="margin: 16px 0 22px;">
+                <thead><tr><th>Component</th><th>Status</th><th>Error</th></tr></thead>
+                <tbody>
+                {% for component, component_status in results.deep_analysis.component_status | dictsort %}
+                    <tr><td>{{ component }}</td><td>{{ component_status.status.value }}</td><td>{{ component_status.error or '' }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
             <div class="deep-grid">
                 {% if figures.deep_analysis.cka_heatmap is defined and figures.deep_analysis.cka_heatmap %}
                 <div class="deep-card">
@@ -656,9 +715,78 @@
     </div>
     {% endif %}
 
+    <!-- ====================== EVIDENCE & PROVENANCE ====================== -->
+    <div class="section">
+        <div class="section-header">
+            <h2>Evidence and Provenance</h2>
+        </div>
+        <div class="section-body">
+            <div class="stat-grid" style="margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.result_schema_version }}</div>
+                    <div class="stat-label">Result Schema</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ "%.0f%%" | format(results.roi_coverage * 100) }}</div>
+                    <div class="stat-label">ROI Evidence Coverage</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ results.probe_digest[:12] if results.probe_digest else 'Unavailable' }}</div>
+                    <div class="stat-label">Probe Digest</div>
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Category</th>
+                        <th>Sample</th>
+                        <th>Status / Score</th>
+                        <th>Raw Model Output</th>
+                        <th>Judge Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model_label, scores in [('Base', results.base_scores), ('Fine-tuned', results.ft_scores)] %}
+                    {% for category, category_score in scores | dictsort %}
+                    {% for verdict in category_score.sample_verdicts %}
+                    <tr>
+                        <td>{{ model_label }}</td>
+                        <td>{{ category }}</td>
+                        <td style="font-family: monospace; font-size: 12px;">{{ verdict.sample_id }}</td>
+                        <td class="score-cell">
+                            {{ verdict.status.value }}{% if verdict.score is not none %} / {{ "%.3f" | format(verdict.score) }}{% endif %}
+                        </td>
+                        <td><div class="evidence-output">{{ verdict.model_output if verdict.model_output is not none else 'Unavailable' }}</div></td>
+                        <td>
+                            <div>{{ verdict.judge_type }}: {{ verdict.explanation }}</div>
+                            {% if verdict.error %}<div class="score-down">{{ verdict.error }}</div>{% endif %}
+                            {% if verdict.raw_judge_output is not none %}<div class="evidence-output">{{ verdict.raw_judge_output }}</div>{% endif %}
+                            {% if verdict.test_cases %}<div>{{ verdict.test_cases | length }} execution cases recorded</div>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div style="margin-top: 20px;">
+                <strong style="font-size: 12px; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.05em;">Judge provenance</strong>
+                <pre class="evidence-output">{{ results.judge_provenance | tojson(indent=2) }}</pre>
+            </div>
+            <div style="margin-top: 12px;">
+                <strong style="font-size: 12px; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.05em;">Run provenance</strong>
+                <pre class="evidence-output">{{ results.provenance | tojson(indent=2) }}</pre>
+            </div>
+        </div>
+    </div>
+
     <!-- ====================== FOOTER ====================== -->
     <div class="footer">
-        Generated by <strong>FineTuneCheck v{{ version }}</strong>
+        Generated by <strong>FineTuneCheck v{{ version }}</strong>. Scores are evaluation evidence,
+        not a deployment guarantee; review missing measurements and sample-level outputs before use.
     </div>
 </div>
 
@@ -667,41 +795,36 @@
 (function() {
     var plotlyConfig = {responsive: true, displayModeBar: false};
 
-    function renderChart(elementId, figJson) {
+    function renderChart(elementId, fig) {
         var el = document.getElementById(elementId);
-        if (!el || !figJson || figJson === '{}') return;
-        try {
-            var fig = JSON.parse(figJson);
-            Plotly.newPlot(el, fig.data || [], fig.layout || {}, plotlyConfig);
-        } catch(e) {
-            console.warn('Failed to render chart ' + elementId + ':', e);
-        }
+        if (!el || !fig || !Array.isArray(fig.data) || typeof Plotly === 'undefined') return;
+        Plotly.newPlot(el, fig.data, fig.layout || {}, plotlyConfig);
     }
 
     // Primary charts
-    renderChart('chart-radar', {{ figures.radar | safe }});
-    renderChart('chart-retention-bars', {{ figures.retention_bars | safe }});
-    renderChart('chart-target-bars', {{ figures.target_bars | safe }});
+    renderChart('chart-radar', {{ figures.radar | tojson }});
+    renderChart('chart-retention-bars', {{ figures.retention_bars | tojson }});
+    renderChart('chart-target-bars', {{ figures.target_bars | tojson }});
     {% if figures.roi_breakdown %}
-    renderChart('chart-roi-breakdown', {{ figures.roi_breakdown | safe }});
+    renderChart('chart-roi-breakdown', {{ figures.roi_breakdown | tojson }});
     {% endif %}
 
     // Deep analysis charts
     {% if figures.deep_analysis %}
     {% if figures.deep_analysis.cka_heatmap is defined and figures.deep_analysis.cka_heatmap %}
-    renderChart('chart-cka', {{ figures.deep_analysis.cka_heatmap | safe }});
+    renderChart('chart-cka', {{ figures.deep_analysis.cka_heatmap | tojson }});
     {% endif %}
     {% if figures.deep_analysis.ppl_dist is defined and figures.deep_analysis.ppl_dist %}
-    renderChart('chart-ppl', {{ figures.deep_analysis.ppl_dist | safe }});
+    renderChart('chart-ppl', {{ figures.deep_analysis.ppl_dist | tojson }});
     {% endif %}
     {% if figures.deep_analysis.spectral is defined and figures.deep_analysis.spectral %}
-    renderChart('chart-spectral', {{ figures.deep_analysis.spectral | safe }});
+    renderChart('chart-spectral', {{ figures.deep_analysis.spectral | tojson }});
     {% endif %}
     {% if figures.deep_analysis.calibration is defined and figures.deep_analysis.calibration %}
-    renderChart('chart-calibration', {{ figures.deep_analysis.calibration | safe }});
+    renderChart('chart-calibration', {{ figures.deep_analysis.calibration | tojson }});
     {% endif %}
     {% if figures.deep_analysis.activation is defined and figures.deep_analysis.activation %}
-    renderChart('chart-activation', {{ figures.deep_analysis.activation | safe }});
+    renderChart('chart-activation', {{ figures.deep_analysis.activation | tojson }});
     {% endif %}
     {% endif %}
 })();

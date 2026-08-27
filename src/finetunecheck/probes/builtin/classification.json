@@ -1,6 +1,7 @@
 {
   "name": "classification",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "classification",
   "judge_type": "exact_match",
   "judge_criteria": "Compare the predicted label against the reference label. Case-insensitive match. Score 1.0 for exact match, 0.0 otherwise.",

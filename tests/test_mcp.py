@@ -50,6 +50,7 @@ class TestMCPServer:
         # has a 'server' object. The tool handlers are in TOOL_HANDLERS dict.
         try:
             from finetunecheck.mcp.tools import TOOL_HANDLERS
+
             assert len(TOOL_HANDLERS) >= 1, "Should have at least 1 tool handler"
             for name, handler in TOOL_HANDLERS.items():
                 assert isinstance(name, str)

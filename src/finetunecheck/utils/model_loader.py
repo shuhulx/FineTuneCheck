@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterator
-from typing import Any
-
-import torch
-from torch import Tensor
+from typing import TYPE_CHECKING, Any, cast
 
 from finetunecheck.models import ModelSpec, ModelType
 from finetunecheck.utils.device import detect_device
+
+if TYPE_CHECKING:
+    import torch
+    from torch import Tensor
 
 
 class AnalysisModel:
@@ -25,6 +26,7 @@ class AnalysisModel:
         self,
         input_ids: Tensor,
         layers: list[int] | None = None,
+        attention_mask: Tensor | None = None,
     ) -> dict[int, Tensor]:
         """Capture hidden states from specified layers using forward hooks.
 
@@ -36,6 +38,8 @@ class AnalysisModel:
             Dict mapping layer index to hidden state tensor.
         """
         hidden_states: dict[int, Tensor] = {}
+        import torch
+
         hooks = []
 
         target_layers = self._get_transformer_layers()
@@ -57,14 +61,14 @@ class AnalysisModel:
 
         try:
             with torch.no_grad():
-                self.model(input_ids)
+                self.model(input_ids, attention_mask=attention_mask)
         finally:
             for h in hooks:
                 h.remove()
 
         return hidden_states
 
-    def get_logits(self, input_ids: Tensor) -> Tensor:
+    def get_logits(self, input_ids: Tensor, attention_mask: Tensor | None = None) -> Tensor:
         """Run forward pass and return logits.
 
         Args:
@@ -73,14 +77,17 @@ class AnalysisModel:
         Returns:
             Logits tensor of shape (batch, seq_len, vocab_size).
         """
+        import torch
+
         with torch.no_grad():
-            outputs = self.model(input_ids)
+            outputs = self.model(input_ids, attention_mask=attention_mask)
         return outputs.logits
 
     def get_attention_weights(
         self,
         input_ids: Tensor,
         layers: list[int] | None = None,
+        attention_mask: Tensor | None = None,
     ) -> dict[int, Tensor]:
         """Capture attention weights from specified layers using forward hooks.
 
@@ -92,6 +99,8 @@ class AnalysisModel:
             Dict mapping layer index to attention weight tensor.
         """
         attention_weights: dict[int, Tensor] = {}
+        import torch
+
         hooks = []
 
         attn_modules = self._get_attention_modules()
@@ -111,7 +120,11 @@ class AnalysisModel:
 
         try:
             with torch.no_grad():
-                self.model(input_ids, output_attentions=True)
+                self.model(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    output_attentions=True,
+                )
         finally:
             for h in hooks:
                 h.remove()
@@ -167,6 +180,27 @@ class ModelLoader:
             - If path contains adapter_config.json -> LoRA (base_model read from config)
             - Else -> HF
         """
+        if path.startswith("peft://"):
+            adapter_reference = path.removeprefix("peft://")
+            adapter_id, separator, revision = adapter_reference.rpartition("@")
+            if not separator:
+                adapter_id = adapter_reference
+                revision = ""
+            if not adapter_id:
+                raise ValueError("peft:// model identifiers must not be empty")
+            from peft import PeftConfig
+
+            adapter_config = PeftConfig.from_pretrained(
+                adapter_id,
+                revision=revision or None,
+            )
+            return ModelSpec(
+                path=adapter_id,
+                model_type=ModelType.LORA,
+                base_model=adapter_config.base_model_name_or_path,
+                revision=revision or None,
+            )
+
         if path.endswith(".gguf"):
             return ModelSpec(path=path, model_type=ModelType.GGUF)
 
@@ -187,6 +221,15 @@ class ModelLoader:
             base_model = adapter_cfg.get("base_model_name_or_path", None)
             return ModelSpec(path=path, model_type=ModelType.LORA, base_model=base_model)
 
+        if not os.path.exists(path):
+            model_id, separator, revision = path.rpartition("@")
+            if separator and model_id and revision:
+                return ModelSpec(
+                    path=model_id,
+                    model_type=ModelType.HF,
+                    revision=revision,
+                )
+
         return ModelSpec(path=path, model_type=ModelType.HF)
 
     @staticmethod
@@ -205,9 +248,12 @@ class ModelLoader:
 
         For LoRA models, loads base + adapter via PEFT without merging.
         """
+        import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         resolved_device = detect_device(device)
+        dtype = torch.float32 if resolved_device == "cpu" else torch.float16
+        device_map = "auto" if device == "auto" and resolved_device != "cpu" else None
 
         if spec.model_type == ModelType.GGUF:
             raise ValueError(
@@ -224,22 +270,27 @@ class ModelLoader:
 
             base = AutoModelForCausalLM.from_pretrained(
                 spec.base_model,
-                torch_dtype=torch.float16,
-                device_map=resolved_device if resolved_device == "auto" else None,
+                torch_dtype=dtype,
+                device_map=device_map,
             )
-            model = PeftModel.from_pretrained(base, spec.path)
-            if resolved_device not in ("auto",):
+            adapter_kwargs = {"revision": spec.revision} if spec.revision else {}
+            model: Any = cast(Any, PeftModel).from_pretrained(base, spec.path, **adapter_kwargs)
+            if device_map is None:
                 model = model.to(resolved_device)
             tokenizer = AutoTokenizer.from_pretrained(spec.base_model)
         else:
             model = AutoModelForCausalLM.from_pretrained(
                 spec.path,
-                torch_dtype=torch.float16,
-                device_map=resolved_device if resolved_device == "auto" else None,
+                torch_dtype=dtype,
+                device_map=device_map,
+                **({"revision": spec.revision} if spec.revision else {}),
             )
-            if resolved_device not in ("auto",):
+            if device_map is None:
                 model = model.to(resolved_device)
-            tokenizer = AutoTokenizer.from_pretrained(spec.path)
+            tokenizer = AutoTokenizer.from_pretrained(
+                spec.path,
+                **({"revision": spec.revision} if spec.revision else {}),
+            )
 
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token

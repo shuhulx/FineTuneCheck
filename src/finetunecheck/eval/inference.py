@@ -1,11 +1,10 @@
-"""Inference backend abstraction — pluggable generation for HF, vLLM, and llama.cpp."""
+"""Observable inference backends with faithful chat and batching behavior."""
 
 from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-
-import torch
+from typing import Any, cast
 
 from finetunecheck.models import InferenceResult, ModelSpec, ModelType
 from finetunecheck.utils.device import detect_device
@@ -14,7 +13,11 @@ from finetunecheck.utils.device import detect_device
 class InferenceBackend(ABC):
     @abstractmethod
     def generate_batch(
-        self, prompts: list[str], max_tokens: int = 512, probe_name: str = ""
+        self,
+        prompts: list[str],
+        max_tokens: int = 512,
+        probe_name: str = "",
+        **generation_settings: Any,
     ) -> list[InferenceResult]: ...
 
     @abstractmethod
@@ -27,257 +30,386 @@ class InferenceBackend(ABC):
     @abstractmethod
     def model_path(self) -> str: ...
 
+    @property
+    @abstractmethod
+    def backend_name(self) -> str: ...
+
 
 class TransformersBackend(InferenceBackend):
-    """Uses HuggingFace transformers for generation."""
+    """Hugging Face generation with chat templates and correct left padding."""
 
-    def __init__(self, model, tokenizer, device: str, path: str) -> None:
+    def __init__(
+        self,
+        model: Any,
+        tokenizer: Any,
+        device: str,
+        path: str,
+        *,
+        adapter_base_model: str | None = None,
+    ) -> None:
         self._model = model
         self._tokenizer = tokenizer
         self._device = device
         self._path = path
+        self.adapter_relationship = (
+            {"base_model_name_or_path": adapter_base_model} if adapter_base_model else {}
+        )
         self._model.eval()
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
+        self._tokenizer.padding_side = "left"
 
     @property
     def model_path(self) -> str:
         return self._path
 
+    @property
+    def backend_name(self) -> str:
+        return "transformers"
+
+    def _format_prompts(self, prompts: list[str]) -> list[str]:
+        if not getattr(self._tokenizer, "chat_template", None):
+            return prompts
+        return [
+            self._tokenizer.apply_chat_template(
+                [{"role": "user", "content": prompt}],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            for prompt in prompts
+        ]
+
+    def _context_limit(self) -> int:
+        candidates = [
+            getattr(getattr(self._model, "config", None), "max_position_embeddings", None),
+            getattr(self._tokenizer, "model_max_length", None),
+        ]
+        sane = [
+            int(value) for value in candidates if isinstance(value, int) and 0 < value < 10_000_000
+        ]
+        return min(sane) if sane else 2048
+
     def generate_batch(
-        self, prompts: list[str], max_tokens: int = 512, probe_name: str = ""
+        self,
+        prompts: list[str],
+        max_tokens: int = 512,
+        probe_name: str = "",
+        **generation_settings: Any,
     ) -> list[InferenceResult]:
-        results = []
+        if not prompts:
+            return []
+        import torch
+
+        formatted = self._format_prompts(prompts)
         encoded = self._tokenizer(
-            prompts,
+            formatted,
             return_tensors="pt",
             padding=True,
-            truncation=True,
-            max_length=2048,
-        ).to(self._device)
+            truncation=False,
+        )
+        input_len = int(encoded["input_ids"].shape[1])
+        context_limit = self._context_limit()
+        if input_len + max_tokens > context_limit:
+            raise ValueError(
+                f"Prompt batch uses {input_len} tokens and requests {max_tokens} new tokens, "
+                f"exceeding context limit {context_limit}"
+            )
+        if hasattr(encoded, "to"):
+            encoded = encoded.to(self._device)
+        else:
+            encoded = {key: value.to(self._device) for key, value in encoded.items()}
 
-        input_len = encoded["input_ids"].shape[1]
-
-        t0 = time.perf_counter()
+        allowed_settings = {
+            "do_sample",
+            "temperature",
+            "top_p",
+            "top_k",
+            "repetition_penalty",
+        }
+        unknown = set(generation_settings) - allowed_settings
+        if unknown:
+            raise ValueError(f"Unsupported generation settings: {sorted(unknown)}")
+        generate_kwargs = {
+            "max_new_tokens": max_tokens,
+            "do_sample": False,
+            "pad_token_id": self._tokenizer.pad_token_id,
+            **generation_settings,
+        }
+        started = time.perf_counter()
         with torch.no_grad():
-            output_ids = self._model.generate(
-                **encoded,
-                max_new_tokens=max_tokens,
-                do_sample=False,
-                pad_token_id=self._tokenizer.pad_token_id,
+            output_ids = self._model.generate(**encoded, **generate_kwargs)
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        if len(output_ids) != len(prompts):
+            raise ValueError(
+                f"Transformers generated {len(output_ids)} sequences for {len(prompts)} prompts"
             )
-        elapsed_ms = (time.perf_counter() - t0) * 1000
         per_sample_ms = elapsed_ms / len(prompts)
-
-        for i, ids in enumerate(output_ids):
-            generated_ids = ids[input_len:]
-            text = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
-            results.append(
-                InferenceResult(
-                    model_path=self._path,
-                    probe_name=probe_name,
-                    sample_id=str(i),
-                    output=text.strip(),
-                    latency_ms=per_sample_ms,
-                )
+        return [
+            InferenceResult(
+                model_path=self._path,
+                probe_name=probe_name,
+                sample_id=str(index),
+                output=self._tokenizer.decode(
+                    token_ids[input_len:], skip_special_tokens=True
+                ).strip(),
+                latency_ms=per_sample_ms,
+                backend=self.backend_name,
             )
-        return results
+            for index, token_ids in enumerate(output_ids)
+        ]
 
     def get_logprobs(self, texts: list[str]) -> list[list[float]]:
-        all_logprobs = []
-        for text in texts:
-            encoded = self._tokenizer(
-                text, return_tensors="pt", truncation=True, max_length=2048
-            ).to(self._device)
+        import torch
+
+        all_logprobs: list[list[float]] = []
+        for text in self._format_prompts(texts):
+            encoded = self._tokenizer(text, return_tensors="pt", truncation=False)
+            length = int(encoded["input_ids"].shape[1])
+            if length > self._context_limit():
+                raise ValueError(
+                    f"Input uses {length} tokens, exceeding context limit {self._context_limit()}"
+                )
+            encoded = encoded.to(self._device)
             with torch.no_grad():
                 outputs = self._model(**encoded)
-            logits = outputs.logits
-            log_probs = torch.log_softmax(logits, dim=-1)
+            log_probs = torch.log_softmax(outputs.logits, dim=-1)
             token_ids = encoded["input_ids"][0]
-            token_logprobs = []
-            for pos in range(1, len(token_ids)):
-                lp = log_probs[0, pos - 1, token_ids[pos]].item()
-                token_logprobs.append(lp)
-            all_logprobs.append(token_logprobs)
+            all_logprobs.append(
+                [
+                    log_probs[0, position - 1, token_ids[position]].item()
+                    for position in range(1, len(token_ids))
+                ]
+            )
         return all_logprobs
 
     def cleanup(self) -> None:
+        import torch
+
         del self._model
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
 
 class VLLMBackend(InferenceBackend):
-    """Uses vLLM for fast batch inference."""
-
-    def __init__(self, model_path: str, **kwargs) -> None:
+    def __init__(self, model_path: str, **kwargs: Any) -> None:
         try:
             from vllm import LLM, SamplingParams
-        except ImportError:
+        except (ImportError, ModuleNotFoundError) as exc:
             raise ImportError(
                 "vLLM is not installed. Install with: pip install finetunecheck[vllm]"
-            )
+            ) from exc
         self._path = model_path
         self._llm = LLM(model=model_path, **kwargs)
-        self._SamplingParams = SamplingParams
+        self._sampling_params = SamplingParams
 
     @property
     def model_path(self) -> str:
         return self._path
 
-    def generate_batch(
-        self, prompts: list[str], max_tokens: int = 512, probe_name: str = ""
-    ) -> list[InferenceResult]:
-        params = self._SamplingParams(max_tokens=max_tokens, temperature=0.0)
-        t0 = time.perf_counter()
-        outputs = self._llm.generate(prompts, params)
-        elapsed_ms = (time.perf_counter() - t0) * 1000
-        per_sample_ms = elapsed_ms / len(prompts) if prompts else 0
+    @property
+    def backend_name(self) -> str:
+        return "vllm"
 
-        results = []
-        for i, out in enumerate(outputs):
-            text = out.outputs[0].text if out.outputs else ""
-            results.append(
-                InferenceResult(
-                    model_path=self._path,
-                    probe_name=probe_name,
-                    sample_id=str(i),
-                    output=text.strip(),
-                    latency_ms=per_sample_ms,
-                )
+    def generate_batch(
+        self,
+        prompts: list[str],
+        max_tokens: int = 512,
+        probe_name: str = "",
+        **generation_settings: Any,
+    ) -> list[InferenceResult]:
+        if not prompts:
+            return []
+        params = self._sampling_params(
+            max_tokens=max_tokens,
+            temperature=generation_settings.pop("temperature", 0.0),
+            **generation_settings,
+        )
+        started = time.perf_counter()
+        outputs = self._llm.generate(prompts, params)
+        if len(outputs) != len(prompts):
+            raise ValueError(f"vLLM generated {len(outputs)} results for {len(prompts)} prompts")
+        per_sample_ms = (time.perf_counter() - started) * 1000 / len(prompts)
+        return [
+            InferenceResult(
+                model_path=self._path,
+                probe_name=probe_name,
+                sample_id=str(index),
+                output=(output.outputs[0].text if output.outputs else "").strip(),
+                latency_ms=per_sample_ms,
+                backend=self.backend_name,
             )
-        return results
+            for index, output in enumerate(outputs)
+        ]
 
     def get_logprobs(self, texts: list[str]) -> list[list[float]]:
-        params = self._SamplingParams(max_tokens=1, temperature=0.0, prompt_logprobs=1)
-        all_logprobs = []
+        params = self._sampling_params(max_tokens=1, temperature=0.0, prompt_logprobs=1)
+        result: list[list[float]] = []
         for text in texts:
             outputs = self._llm.generate([text], params)
-            prompt_lps = outputs[0].prompt_logprobs or []
-            token_lps = []
-            for lp_dict in prompt_lps:
-                if lp_dict is not None:
-                    vals = list(lp_dict.values())
-                    token_lps.append(vals[0].logprob if vals else 0.0)
-            all_logprobs.append(token_lps)
-        return all_logprobs
+            prompt_logprobs = outputs[0].prompt_logprobs or []
+            result.append(
+                [next(iter(entry.values())).logprob for entry in prompt_logprobs if entry]
+            )
+        return result
 
     def cleanup(self) -> None:
         del self._llm
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
 
 
 class LlamaCppBackend(InferenceBackend):
-    """Uses llama-cpp-python for GGUF models."""
-
-    def __init__(self, model_path: str, **kwargs) -> None:
+    def __init__(self, model_path: str, **kwargs: Any) -> None:
         try:
             from llama_cpp import Llama
-        except ImportError:
+        except (ImportError, ModuleNotFoundError) as exc:
             raise ImportError(
-                "llama-cpp-python is not installed. Install with: pip install finetunecheck[gguf]"
-            )
+                "llama-cpp-python is not installed. Install finetunecheck[gguf]"
+            ) from exc
         self._path = model_path
-        n_ctx = kwargs.pop("n_ctx", 2048)
-        self._llm = Llama(model_path=model_path, n_ctx=n_ctx, verbose=False, **kwargs)
+        self._context_size = int(kwargs.pop("n_ctx", 2048))
+        self._llm = Llama(
+            model_path=model_path,
+            n_ctx=self._context_size,
+            verbose=False,
+            **kwargs,
+        )
 
     @property
     def model_path(self) -> str:
         return self._path
 
+    @property
+    def backend_name(self) -> str:
+        return "llama_cpp"
+
     def generate_batch(
-        self, prompts: list[str], max_tokens: int = 512, probe_name: str = ""
+        self,
+        prompts: list[str],
+        max_tokens: int = 512,
+        probe_name: str = "",
+        **generation_settings: Any,
     ) -> list[InferenceResult]:
-        results = []
-        for i, prompt in enumerate(prompts):
-            t0 = time.perf_counter()
-            out = self._llm(prompt, max_tokens=max_tokens, echo=False)
-            elapsed_ms = (time.perf_counter() - t0) * 1000
-            text = out["choices"][0]["text"] if out["choices"] else ""
+        results: list[InferenceResult] = []
+        for index, prompt in enumerate(prompts):
+            if len(self._llm.tokenize(prompt.encode())) + max_tokens > self._context_size:
+                raise ValueError("Prompt plus requested output exceeds llama.cpp context")
+            started = time.perf_counter()
+            output = self._llm(
+                prompt,
+                max_tokens=max_tokens,
+                echo=False,
+                **generation_settings,
+            )
+            text = output["choices"][0]["text"] if output["choices"] else ""
             results.append(
                 InferenceResult(
                     model_path=self._path,
                     probe_name=probe_name,
-                    sample_id=str(i),
+                    sample_id=str(index),
                     output=text.strip(),
-                    latency_ms=elapsed_ms,
+                    latency_ms=(time.perf_counter() - started) * 1000,
+                    backend=self.backend_name,
                 )
             )
         return results
 
     def get_logprobs(self, texts: list[str]) -> list[list[float]]:
-        all_logprobs = []
+        result: list[list[float]] = []
         for text in texts:
-            out = self._llm(text, max_tokens=1, echo=True, logprobs=1)
-            lps = []
-            for tok_info in (
-                out.get("choices", [{}])[0].get("logprobs", {}).get("token_logprobs", [])
-            ):
-                if tok_info is not None:
-                    lps.append(tok_info)
-            all_logprobs.append(lps)
-        return all_logprobs
+            output = self._llm(text, max_tokens=1, echo=True, logprobs=1)
+            token_logprobs = (
+                output.get("choices", [{}])[0].get("logprobs", {}).get("token_logprobs", [])
+            )
+            result.append([value for value in token_logprobs if value is not None])
+        return result
 
     def cleanup(self) -> None:
         del self._llm
 
 
-def create_backend(spec: ModelSpec, device: str = "auto") -> InferenceBackend:
-    """Factory: pick the best available backend for the given model spec.
+def _dtype_for_device(resolved_device: str):
+    import torch
 
-    Priority for HF/LoRA: vLLM > transformers.
-    GGUF always uses llama.cpp.
-    """
-    # When device is "auto", pass device_map="auto" directly to HuggingFace
-    # Accelerate so it can distribute across all available GPUs. Only resolve
-    # to a concrete device string for explicit device requests.
-    use_device_map_auto = device == "auto"
-    resolved_device = device if use_device_map_auto else detect_device(device)
+    if resolved_device == "cpu":
+        return torch.float32
+    if resolved_device == "cuda" and torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+        return torch.bfloat16
+    return torch.float16
 
+
+def create_backend(
+    spec: ModelSpec,
+    device: str = "auto",
+    *,
+    preference: str = "auto",
+) -> InferenceBackend:
+    """Create an explicit/observable backend without swallowing runtime failures."""
     if spec.model_type == ModelType.GGUF:
+        if preference not in {"auto", "llama_cpp"}:
+            raise ValueError("GGUF models require the llama_cpp backend")
         return LlamaCppBackend(spec.path)
-
-    # Try vLLM first for HF models (LoRA support varies)
-    if spec.model_type == ModelType.HF:
+    if preference == "llama_cpp":
+        raise ValueError("llama_cpp requires a GGUF model")
+    if preference in {"auto", "vllm"} and spec.model_type == ModelType.HF:
         try:
-            return VLLMBackend(spec.path)
-        except (ImportError, Exception):
-            pass
+            return VLLMBackend(
+                spec.path,
+                **({"revision": spec.revision} if spec.revision else {}),
+            )
+        except ImportError:
+            if preference == "vllm":
+                raise
+    if preference not in {"auto", "transformers", "vllm"}:
+        raise ValueError(f"Unknown inference backend: {preference}")
 
-    # Transformers fallback
     from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    resolved_device = detect_device(device)
+    use_device_map_auto = device == "auto" and resolved_device != "cpu"
+    dtype = _dtype_for_device(resolved_device)
+    load_kwargs = {
+        "torch_dtype": dtype,
+        "device_map": "auto" if use_device_map_auto else None,
+    }
 
     if spec.model_type == ModelType.LORA:
         if not spec.base_model:
-            raise ValueError(
-                "LoRA adapter detected but base_model not set in ModelSpec. "
-                "Ensure adapter_config.json contains base_model_name_or_path."
-            )
+            from peft import PeftConfig
+
+            peft_config = PeftConfig.from_pretrained(spec.path)
+            spec = spec.model_copy(update={"base_model": peft_config.base_model_name_or_path})
+        if not spec.base_model:
+            raise ValueError("PEFT adapter does not declare base_model_name_or_path")
         from peft import PeftModel
 
-        base = AutoModelForCausalLM.from_pretrained(
-            spec.base_model,
-            torch_dtype=torch.float16,
-            device_map="auto" if use_device_map_auto else None,
+        base = AutoModelForCausalLM.from_pretrained(spec.base_model, **load_kwargs)
+        adapter_kwargs = {"revision": spec.revision} if spec.revision else {}
+        model: Any = (
+            cast(Any, PeftModel)
+            .from_pretrained(base, spec.path, **adapter_kwargs)
+            .merge_and_unload()
         )
-        model = PeftModel.from_pretrained(base, spec.path)
-        model = model.merge_and_unload()
-        if not use_device_map_auto:
-            model = model.to(resolved_device)
-        tokenizer = AutoTokenizer.from_pretrained(spec.base_model)
+        tokenizer_source = spec.base_model
     else:
         model = AutoModelForCausalLM.from_pretrained(
             spec.path,
-            torch_dtype=torch.float16,
-            device_map="auto" if use_device_map_auto else None,
+            **load_kwargs,
+            **({"revision": spec.revision} if spec.revision else {}),
         )
-        if not use_device_map_auto:
-            model = model.to(resolved_device)
-        tokenizer = AutoTokenizer.from_pretrained(spec.path)
-
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    actual_device = resolved_device if not use_device_map_auto else "cpu"
-    return TransformersBackend(model, tokenizer, actual_device, spec.path)
+        tokenizer_source = spec.path
+    if not use_device_map_auto:
+        model = model.to(resolved_device)
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_source,
+        **(
+            {"revision": spec.revision} if spec.revision and spec.model_type == ModelType.HF else {}
+        ),
+    )
+    input_device = str(getattr(model, "device", resolved_device))
+    cache_path = f"{spec.path}@{spec.revision}" if spec.revision else spec.path
+    return TransformersBackend(
+        model,
+        tokenizer,
+        input_device,
+        cache_path,
+        adapter_base_model=(spec.base_model if spec.model_type == ModelType.LORA else None),
+    )

@@ -7,20 +7,27 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
-      - run: ruff check src/
-      - run: ruff format --check src/
+          cache: pip
+      - run: python -m pip install -e ".[dev,mcp]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pyright
 
   test:
     runs-on: ubuntu-latest
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
@@ -28,5 +35,97 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev]"
-      - run: pytest --tb=short -q
+          cache: pip
+      - run: python -m pip install -e ".[dev,deep,mcp]"
+      - run: python -m pytest --tb=short -q
+
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev,deep,mcp]"
+      - run: coverage run --source=finetunecheck -m pytest -q -o addopts=''
+      - run: coverage report --show-missing --fail-under=80
+      - run: python scripts/check_coverage.py
+
+  browser-report:
+    runs-on: ubuntu-latest
+    env:
+      FINETUNECHECK_BROWSER_TEST: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m pytest -q -o addopts='' tests/test_release_contracts.py -k report_browser
+
+  mcp:
+    runs-on: ubuntu-latest
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev,mcp]"
+      - run: python -m pytest -q -o addopts='' tests/test_mcp.py tests/test_release_contracts.py -k mcp
+      - run: python -c "import asyncio; from finetunecheck.mcp.server import list_tools; assert len(asyncio.run(list_tools())) == 9"
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install build
+      - run: python -m build
+      - name: Verify wheel contents
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheel = next(Path("dist").glob("finetunecheck-2.0.0-*.whl"))
+          with ZipFile(wheel) as archive:
+              names = set(archive.namelist())
+          assert "finetunecheck/py.typed" in names
+          assert any(name.startswith("finetunecheck/probes/builtin/") for name in names)
+          assert any(name.startswith("finetunecheck/profiles/builtin/") for name in names)
+          assert "finetunecheck/report/templates/base.html.j2" in names
+          assert "finetunecheck/report/templates/comparison.html.j2" in names
+          PY
+      - name: Fresh core wheel
+        run: |
+          python -m venv /tmp/ftcheck-core
+          /tmp/ftcheck-core/bin/pip install dist/finetunecheck-2.0.0-py3-none-any.whl
+          /tmp/ftcheck-core/bin/pip check
+          /tmp/ftcheck-core/bin/python -c "import importlib.metadata, sys, finetunecheck; assert finetunecheck.__version__ == importlib.metadata.version('finetunecheck') == '2.0.0'; assert 'torch' not in sys.modules and 'transformers' not in sys.modules"
+          /tmp/ftcheck-core/bin/ftcheck --version
+      - name: Fresh MCP wheel
+        run: |
+          python -m venv /tmp/ftcheck-mcp
+          /tmp/ftcheck-mcp/bin/pip install "dist/finetunecheck-2.0.0-py3-none-any.whl[mcp]"
+          /tmp/ftcheck-mcp/bin/pip check
+          /tmp/ftcheck-mcp/bin/python -c "import asyncio; from finetunecheck.mcp.server import list_tools; assert len(asyncio.run(list_tools())) == 9"
+      - name: Fresh inference wheel
+        run: |
+          python -m venv /tmp/ftcheck-inference
+          /tmp/ftcheck-inference/bin/pip install "dist/finetunecheck-2.0.0-py3-none-any.whl[inference]"
+          /tmp/ftcheck-inference/bin/pip check
+          /tmp/ftcheck-inference/bin/python -c "import peft, torch, transformers; from finetunecheck.eval.inference import TransformersBackend; from finetunecheck.utils.model_loader import ModelLoader; assert TransformersBackend and ModelLoader and peft and torch and transformers"

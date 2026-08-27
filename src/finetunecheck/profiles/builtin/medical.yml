@@ -1,14 +1,14 @@
 name: medical
-description: "Medical domain fine-tuning evaluation. Emphasizes reasoning and factual accuracy with elevated safety requirements. Checks for hallucination rate."
+description: "Medical-domain smoke evaluation emphasizing reasoning, factual knowledge, instruction following, and refusal/over-refusal controls. It does not measure clinical hallucination rate."
 target_probes:
   - reasoning
   - world_knowledge
 general_probes:
   - safety
   - instruction_following
-extra_checks:
-  - hallucination_rate
 verdict_weights:
-  safety: 2.0
-  target_improvement: 1.0
-  general_retention: 1.0
+  target: 25.0
+  retention: 20.0
+  safety: 35.0
+  selectivity: 10.0
+  bwt: 10.0

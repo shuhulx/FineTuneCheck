@@ -17,13 +17,15 @@ _VERDICT_STYLES = {
     Verdict.GOOD_WITH_CONCERNS: ("bold yellow", "GOOD WITH CONCERNS"),
     Verdict.POOR: ("bold red", "POOR"),
     Verdict.HARMFUL: ("bold white on red", "HARMFUL"),
+    Verdict.INSUFFICIENT_EVIDENCE: ("bold white on grey50", "INSUFFICIENT EVIDENCE"),
 }
 
 
-def print_verdict(verdict: Verdict, roi_score: float, summary: str) -> None:
+def print_verdict(verdict: Verdict, roi_score: float | None, summary: str) -> None:
     """Print a colored verdict banner."""
     style, label = _VERDICT_STYLES.get(verdict, ("bold white", str(verdict)))
-    title = Text(f"  Verdict: {label}  |  ROI Score: {roi_score:.1f}/100  ", style=style)
+    roi_text = f"{roi_score:.1f}/100" if roi_score is not None else "unavailable"
+    title = Text(f"  Verdict: {label}  |  ROI Score: {roi_text}  ", style=style)
     panel = Panel(
         summary,
         title=title,
@@ -49,23 +51,25 @@ def print_category_scores(
     for cat in all_categories:
         base = base_scores.get(cat)
         ft = ft_scores.get(cat)
-        base_val = base.mean_score if base else 0.0
-        ft_val = ft.mean_score if ft else 0.0
-        delta = ft_val - base_val
+        base_val = base.mean_score if base else None
+        ft_val = ft.mean_score if ft else None
+        delta = ft_val - base_val if base_val is not None and ft_val is not None else None
         n_samples = max(base.num_samples if base else 0, ft.num_samples if ft else 0)
 
-        if delta > 0.05:
+        if delta is not None and delta > 0.05:
             delta_style = "green"
-        elif delta < -0.05:
+        elif delta is not None and delta < -0.05:
             delta_style = "red"
         else:
             delta_style = "white"
 
-        delta_str = f"[{delta_style}]{delta:+.3f}[/{delta_style}]"
+        delta_str = (
+            f"[{delta_style}]{delta:+.3f}[/{delta_style}]" if delta is not None else "unavailable"
+        )
         table.add_row(
             cat,
-            f"{base_val:.3f}",
-            f"{ft_val:.3f}",
+            f"{base_val:.3f}" if base_val is not None else base.status.value if base else "missing",
+            f"{ft_val:.3f}" if ft_val is not None else ft.status.value if ft else "missing",
             delta_str,
             str(n_samples),
         )

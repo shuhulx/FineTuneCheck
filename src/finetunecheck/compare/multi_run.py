@@ -60,12 +60,16 @@ class MultiRunComparator:
 
         run_results: dict[str, EvalResults] = {}
 
+        shared_base_scores = None
         for run_name, ft_path in finetuned_models.items():
-            run_config = config.model_copy(
-                update={"base_model": base_model, "finetuned_model": ft_path}
-            )
-            runner = EvalRunner(run_config)
-            run_results[run_name] = runner.run()
+            payload = config.model_dump()
+            payload.update({"base_model": base_model, "finetuned_model": ft_path})
+            run_config = EvalConfig.model_validate(payload)
+            runner = EvalRunner(run_config, shared_base_scores=shared_base_scores)
+            result = runner.run()
+            run_results[run_name] = result
+            if shared_base_scores is None:
+                shared_base_scores = result.base_scores
 
         return self._analyze(base_model, run_results)
 
@@ -89,24 +93,44 @@ class MultiRunComparator:
                 recommendation="No runs provided for comparison.",
             )
 
+        self._validate_compatibility(base_model, run_results)
+
         # Best by ROI
-        best_run = max(run_results, key=lambda n: run_results[n].roi_score)
+        best_run = max(run_results, key=lambda n: run_results[n].roi_score or 0.0)
 
         # Best target performance
-        best_target = max(run_results, key=lambda n: run_results[n].target_improvement)
+        def _target_gain(name: str) -> float:
+            value = run_results[name].target_improvement
+            return value if value is not None else float("-inf")
+
+        best_target = max(run_results, key=_target_gain)
 
         # Least forgetting (highest backward_transfer, i.e. closest to 0)
         def _bwt(name: str) -> float:
             f = run_results[name].forgetting
-            return f.backward_transfer if f else 0.0
+            return (
+                f.backward_transfer
+                if f is not None and f.backward_transfer is not None
+                else float("-inf")
+            )
 
         least_forg = max(run_results, key=_bwt)
 
-        # Pareto frontier: target_improvement vs -bwt (higher is better on both)
+        # Pareto frontier: target improvement and BWT are both directly higher-is-better.
         pareto_points: dict[str, tuple[float, float]] = {}
         for name, res in run_results.items():
-            bwt = res.forgetting.backward_transfer if res.forgetting else 0.0
-            pareto_points[name] = (res.target_improvement, -bwt)
+            if (
+                res.target_improvement is None
+                or res.forgetting is None
+                or res.forgetting.backward_transfer is None
+            ):
+                raise ValueError(
+                    f"Run {name!r} lacks measured target improvement or backward transfer"
+                )
+            pareto_points[name] = (
+                res.target_improvement,
+                res.forgetting.backward_transfer,
+            )
 
         frontier = compute_pareto_frontier(pareto_points)
 
@@ -126,6 +150,41 @@ class MultiRunComparator:
         )
 
     @staticmethod
+    def _validate_compatibility(base_model: str, run_results: dict[str, EvalResults]) -> None:
+        first_name, first = next(iter(run_results.items()))
+        if not first.probe_digest:
+            raise ValueError(
+                f"Run {first_name!r} lacks a probe digest and cannot be compared safely"
+            )
+        expected = {
+            "base_model": first.base_model,
+            "probe_digest": first.probe_digest,
+            "judge_provenance": first.judge_provenance,
+            "target_tasks": first.target_tasks,
+            "result_schema_version": first.result_schema_version,
+            "metric_schema_version": first.metric_schema_version,
+        }
+        if first.base_model != base_model:
+            raise ValueError(
+                f"Comparison base {base_model!r} does not match run {first_name!r} base "
+                f"{first.base_model!r}"
+            )
+        for name, result in run_results.items():
+            actual = {
+                "base_model": result.base_model,
+                "probe_digest": result.probe_digest,
+                "judge_provenance": result.judge_provenance,
+                "target_tasks": result.target_tasks,
+                "result_schema_version": result.result_schema_version,
+                "metric_schema_version": result.metric_schema_version,
+            }
+            mismatches = [key for key in expected if actual[key] != expected[key]]
+            if mismatches:
+                raise ValueError(
+                    f"Run {name!r} is incompatible with {first_name!r}: " + ", ".join(mismatches)
+                )
+
+    @staticmethod
     def _build_recommendation(
         runs: dict[str, EvalResults],
         best_run: str,
@@ -137,14 +196,14 @@ class MultiRunComparator:
 
         best = runs[best_run]
         parts.append(
-            f"Best overall run: '{best_run}' with ROI {best.roi_score:.0f}/100 "
+            f"Best overall run: '{best_run}' with ROI {(best.roi_score or 0.0):.0f}/100 "
             f"and verdict {best.verdict.value}."
         )
 
         if best_target != best_run:
             t = runs[best_target]
             parts.append(
-                f"Highest target improvement: '{best_target}' (+{t.target_improvement:.1%})."
+                f"Highest target improvement: '{best_target}' ({(t.target_improvement or 0.0):+.3f})."
             )
 
         if least_forg != best_run:

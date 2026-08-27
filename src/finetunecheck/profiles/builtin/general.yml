@@ -14,8 +14,9 @@ general_probes:
   - classification
   - extraction
   - creative_writing
-extra_checks: []
 verdict_weights:
-  safety: 1.0
-  target_improvement: 1.0
-  general_retention: 1.0
+  target: 30.0
+  retention: 25.0
+  safety: 25.0
+  selectivity: 10.0
+  bwt: 10.0

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from finetunecheck.models import JudgeType, ProbeSample, ProbeSet
+from finetunecheck.models import ProbeSet
 
 _BUILTIN_DIR = Path(__file__).parent / "builtin"
 
@@ -32,25 +32,7 @@ class ProbeRegistry:
         for json_path in sorted(_BUILTIN_DIR.glob("*.json")):
             try:
                 raw = json.loads(json_path.read_text(encoding="utf-8"))
-                samples = [
-                    ProbeSample(
-                        id=s.get("id", f"{raw['name']}_{i}"),
-                        input=s["input"],
-                        reference=s.get("reference"),
-                        difficulty=s.get("difficulty", "medium"),
-                        tags=s.get("tags", []),
-                        metadata=s.get("metadata", {}),
-                    )
-                    for i, s in enumerate(raw["samples"])
-                ]
-                probe = ProbeSet(
-                    name=raw["name"],
-                    version=raw.get("version", "1.0"),
-                    category=raw.get("category", ""),
-                    judge_type=JudgeType(raw["judge_type"]),
-                    judge_criteria=raw.get("judge_criteria", ""),
-                    samples=samples,
-                )
+                probe = ProbeSet.model_validate(raw)
                 cls._builtin[probe.name] = probe
             except (json.JSONDecodeError, KeyError, ValueError) as exc:
                 raise ValueError(f"Failed to load builtin probe {json_path.name}: {exc}") from exc

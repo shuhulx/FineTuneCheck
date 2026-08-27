@@ -6,16 +6,16 @@ from __future__ import annotations
 def compute_pareto_frontier(
     points: dict[str, tuple[float, float]],
 ) -> list[str]:
-    """Find Pareto-optimal runs on the target-improvement vs forgetting tradeoff.
+    """Find Pareto-optimal runs on target-improvement vs BWT.
 
-    Each point is ``(target_improvement, negative_bwt)`` where higher is better
+    Each point is ``(target_improvement, backward_transfer)`` where higher is better
     for *both* dimensions.  A run is Pareto-optimal if no other run dominates it
     (i.e., is >= on both dimensions and strictly > on at least one).
 
     Parameters
     ----------
     points:
-        Mapping of run name to ``(target_improvement, -backward_transfer)``.
+        Mapping of run name to ``(target_improvement, backward_transfer)``.
         Both axes are "higher is better".
 
     Returns

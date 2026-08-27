@@ -1,71 +1,75 @@
-"""Profile loader — load and apply evaluation profiles."""
+"""Strict built-in evaluation profile contracts."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from finetunecheck.config import EvalConfig
+from finetunecheck.forgetting.metrics import canonicalize_roi_weights
 
 _BUILTIN_DIR = Path(__file__).parent / "builtin"
 
 
 class EvalProfile(BaseModel):
-    """An evaluation profile that selects probes and configures weights."""
+    model_config = ConfigDict(extra="forbid")
 
-    name: str
+    name: str = Field(min_length=1)
     description: str = ""
     target_probes: list[str] = Field(default_factory=list)
     general_probes: list[str] = Field(default_factory=list)
-    extra_checks: list[str] = Field(default_factory=list)
     verdict_weights: dict[str, float] = Field(default_factory=dict)
-    num_samples_override: int | None = None
+    hard_gates: dict[str, float | bool] = Field(default_factory=dict)
+    num_samples_override: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> EvalProfile:
+        overlap = set(self.target_probes) & set(self.general_probes)
+        if overlap:
+            raise ValueError(f"Target/general probes overlap: {sorted(overlap)}")
+        if self.verdict_weights:
+            canonicalize_roi_weights(self.verdict_weights)
+        unknown_gates = set(self.hard_gates) - {"sar_min", "strong_safety_required"}
+        if unknown_gates:
+            raise ValueError(f"Unknown profile hard gates: {sorted(unknown_gates)}")
+        return self
 
 
 class ProfileLoader:
-    """Central registry for evaluation profiles.
-
-    Built-in profiles are lazy-loaded from YAML files on first access.
-    """
-
     _profiles: dict[str, EvalProfile] = {}
     _loaded: bool = False
 
     @classmethod
     def _load_builtin(cls) -> None:
-        """Load all built-in profile YAML files."""
         if cls._loaded:
             return
         if not _BUILTIN_DIR.is_dir():
             cls._loaded = True
             return
+        from finetunecheck.probes.registry import ProbeRegistry
+
+        known_probes = set(ProbeRegistry.list())
         for yml_path in sorted(_BUILTIN_DIR.glob("*.yml")):
             try:
                 raw = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
                 if raw is None:
                     continue
-                profile = EvalProfile(
-                    name=raw["name"],
-                    description=raw.get("description", ""),
-                    target_probes=raw.get("target_probes", []),
-                    general_probes=raw.get("general_probes", []),
-                    extra_checks=raw.get("extra_checks", []),
-                    verdict_weights=raw.get("verdict_weights", {}),
-                    num_samples_override=raw.get("num_samples_override"),
-                )
-                cls._profiles[profile.name] = profile
-            except (yaml.YAMLError, KeyError, ValueError) as exc:
+                profile = EvalProfile.model_validate(raw)
+            except (yaml.YAMLError, ValueError) as exc:
                 raise ValueError(f"Failed to load profile {yml_path.name}: {exc}") from exc
+            missing = (set(profile.target_probes) | set(profile.general_probes)) - known_probes
+            if missing:
+                raise ValueError(
+                    f"Profile {profile.name!r} references unknown probes: {sorted(missing)}"
+                )
+            cls._profiles[profile.name] = profile
         cls._loaded = True
 
     @classmethod
     def get(cls, name: str) -> EvalProfile:
-        """Get a profile by name.
-
-        Raises ``KeyError`` if the name is not found.
-        """
         cls._load_builtin()
         if name not in cls._profiles:
             raise KeyError(f"Profile {name!r} not found. Available: {', '.join(cls.list())}")
@@ -73,42 +77,27 @@ class ProfileLoader:
 
     @classmethod
     def list(cls) -> list[str]:
-        """List all available profile names."""
         cls._load_builtin()
-        return sorted(cls._profiles.keys())
+        return sorted(cls._profiles)
 
     @classmethod
     def apply_to_config(cls, profile_name: str, config: EvalConfig) -> EvalConfig:
-        """Apply profile settings to an EvalConfig, returning a modified copy.
-
-        The profile overrides the config's ``general_probes`` with the union of
-        the profile's ``target_probes`` and ``general_probes``. If the profile
-        defines ``num_samples_override``, it overrides the config's ``num_samples``.
-        The profile name is set on the config.
-        """
         profile = cls.get(profile_name)
-
-        all_probes = list(dict.fromkeys(profile.target_probes + profile.general_probes))
-
-        overrides: dict = {
-            "general_probes": all_probes,
+        overrides: dict[str, Any] = {
+            "profile_name": profile.name,
+            "target_tasks": profile.target_probes,
+            "target_task": profile.target_probes[0] if profile.target_probes else None,
+            "general_probes": profile.general_probes,
+            "verdict_weights": canonicalize_roi_weights(profile.verdict_weights),
+            "hard_gates": profile.hard_gates,
         }
         if profile.num_samples_override is not None:
             overrides["num_samples"] = profile.num_samples_override
-
-        if profile.target_probes:
-            overrides["target_task"] = profile.target_probes[0]
-
-        if profile.verdict_weights:
-            overrides["verdict_weights"] = profile.verdict_weights
-
-        if profile.extra_checks:
-            overrides["extra_checks"] = profile.extra_checks
-
-        return config.model_copy(update=overrides)
+        payload = config.model_dump()
+        payload.update(overrides)
+        return EvalConfig.model_validate(payload)
 
     @classmethod
     def reset(cls) -> None:
-        """Reset the loader (useful for testing)."""
         cls._profiles.clear()
         cls._loaded = False

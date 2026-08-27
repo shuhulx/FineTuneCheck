@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 
 def detect_device(preference: str = "auto") -> str:
     """Detect the best available torch device.
@@ -46,10 +48,11 @@ def detect_device(preference: str = "auto") -> str:
 
 def resolve_model_device(model: object) -> str:
     """Extract device string from a loaded model, defaulting to 'cpu'."""
+    model_with_attributes = cast(Any, model)
     if hasattr(model, "device"):
-        return model.device
+        return str(model_with_attributes.device)
     try:
-        return str(next(model.model.parameters()).device)  # type: ignore[attr-defined]
+        return str(next(model_with_attributes.model.parameters()).device)
     except (StopIteration, AttributeError):
         return "cpu"
 

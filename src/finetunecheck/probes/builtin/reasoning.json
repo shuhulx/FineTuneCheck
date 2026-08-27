@@ -1,6 +1,7 @@
 {
   "name": "reasoning",
-  "version": "1.0",
+  "version": "2.0.0",
+  "provenance": {"source": "FineTuneCheck bundled smoke probes", "license": "Apache-2.0", "supports_release_claims": false},
   "category": "reasoning",
   "judge_type": "llm",
   "judge_criteria": "Evaluate the logical correctness and completeness of the reasoning chain. Score 1.0 for fully correct reasoning with valid intermediate steps, 0.5 for partially correct reasoning or correct conclusion with flawed steps, 0.0 for incorrect conclusion or fundamentally flawed logic.",
